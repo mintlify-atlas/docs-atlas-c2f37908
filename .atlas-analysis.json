@@ -1,0 +1,84 @@
+{
+  "projectType": "general",
+  "projectName": "Xenia",
+  "projectDescription": "Xbox 360 emulator research project with PowerPC-to-x64 JIT translation and Xenos GPU emulation",
+  "theme": "aspen",
+  "primaryColor": "#5ca2f2",
+  "lightColor": "#5c7ca4",
+  "darkColor": "#565657",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "quickstart",
+          "installation"
+        ]
+      },
+      {
+        "group": "Building",
+        "pages": [
+          "building/setup",
+          "building/windows",
+          "building/linux",
+          "building/xb-script"
+        ]
+      },
+      {
+        "group": "Architecture",
+        "pages": [
+          "architecture/overview",
+          "architecture/cpu",
+          "architecture/gpu",
+          "architecture/memory",
+          "architecture/kernel"
+        ]
+      },
+      {
+        "group": "GPU Tools",
+        "pages": [
+          "gpu/shader-compiler",
+          "gpu/trace-viewer",
+          "gpu/shader-playground"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "development/contributing",
+          "development/style-guide",
+          "development/debugging"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/configuration",
+          "reference/command-line",
+          "reference/compatibility",
+          "reference/faq"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "PowerPC to x64 JIT compilation with HIR intermediate representation",
+    "Xenos GPU emulation with Vulkan backend",
+    "Xbox 360 kernel and system call emulation",
+    "GPU trace viewer and shader debugging tools",
+    "Virtual and physical memory management",
+    "STFS (Secure Transient File System) support"
+  ],
+  "publicApiSurface": [
+    "xe::Emulator - Main emulator class",
+    "xe::cpu::Processor - CPU emulation and JIT",
+    "xe::gpu::GraphicsSystem - GPU emulation",
+    "xe::kernel::KernelState - Kernel emulation",
+    "xe::memory::Memory - Virtual/physical memory management",
+    "xe::vfs::VirtualFileSystem - File system abstraction",
+    "xb build - Build command",
+    "xb setup - Setup command",
+    "xb devenv - Development environment setup"
+  ]
+}
