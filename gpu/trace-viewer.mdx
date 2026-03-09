@@ -1,0 +1,169 @@
+---
+title: Trace Viewer
+description: Capture and analyze rendered frames for graphics debugging
+---
+
+The `xe-gpu-trace-viewer` is a debugging tool that allows you to capture and inspect individual frames or sequences of frames rendered by Xenia. This enables rapid iteration on graphical issues without needing to restart the full emulator.
+
+## Overview
+
+The trace viewer workflow separates frame capture (during emulation) from frame analysis (in the trace viewer). This allows you to:
+
+- Capture specific frames that exhibit rendering issues
+- Inspect GPU commands and draw calls
+- Analyze render states and resources
+- Iterate on fixes without re-running the game
+
+## Workflow
+
+The basic trace viewer workflow consists of the following steps:
+
+<Steps>
+  <Step title="Capture the frame in game">
+    Press **F4** during gameplay to capture a single frame, or use `--trace_gpu_stream` to capture a sequence of frames.
+  </Step>
+  
+  <Step title="Configure trace viewer">
+    Add the captured trace file path to the `xe-gpu-trace-viewer` debugging command line in Visual Studio.
+  </Step>
+  
+  <Step title="Launch trace viewer">
+    Start `xe-gpu-trace-viewer` to load and inspect the captured frame.
+  </Step>
+  
+  <Step title="Analyze the frame">
+    Explore the GPU commands, draw calls, textures, and render states to identify issues.
+  </Step>
+  
+  <Step title="Modify code">
+    Make changes to Xenia's graphics code to fix the identified issue.
+  </Step>
+  
+  <Step title="Build and relaunch">
+    Rebuild the project and restart the trace viewer to test your changes.
+  </Step>
+  
+  <Step title="Iterate">
+    Repeat steps 4-6 until the issue is resolved.
+  </Step>
+</Steps>
+
+## Capturing Frames
+
+### Setting Up Capture
+
+Before capturing frames, you must specify a path prefix for trace files:
+
+```bash
+xenia.exe --trace_gpu_prefix=path/file_prefix_ game.xex
+```
+
+All captured trace files will be saved with names based on the specified prefix plus a randomized suffix.
+
+### Single Frame Capture
+
+To capture a single frame while Xenia is running:
+
+1. Run Xenia with the `--trace_gpu_prefix` flag
+2. Navigate to the scene with the graphical issue
+3. Press **F4** to capture the next frame
+
+The frame capture includes all GPU commands up until a `VdSwap` call (the presentation of the frame). The trace file is immediately available for viewing.
+
+**Example:**
+
+```bash
+xenia.exe --trace_gpu_prefix=traces/frame_ game.xex
+```
+
+Press F4 during gameplay to capture a frame. The file might be saved as `traces/frame_a3c2f1.trace`.
+
+### Capturing Frame Sequences
+
+For issues that involve multiple frames or animation problems, you can capture a stream of frames:
+
+```bash
+xenia.exe --trace_gpu_prefix=traces/stream_ --trace_gpu_stream game.xex
+```
+
+With `--trace_gpu_stream` enabled, Xenia will write all rendered frames to a trace file, allowing you to seek through them in the trace viewer.
+
+<Warning>
+  Trace stream files can become very large quickly, as they contain complete GPU command buffers for every rendered frame. Use this feature sparingly and for short capture sessions.
+</Warning>
+
+## Using the Trace Viewer
+
+### Loading Trace Files
+
+In Visual Studio, configure the debugging command line arguments for `xe-gpu-trace-viewer`:
+
+```
+path/to/captured_trace.trace
+```
+
+Then launch the trace viewer through the debugger or run it directly:
+
+```bash
+xe-gpu-trace-viewer traces/frame_a3c2f1.trace
+```
+
+### Inspecting Frames
+
+Once loaded, the trace viewer provides tools to:
+
+- **View draw calls** - Step through each GPU command in the frame
+- **Inspect resources** - Examine textures, buffers, and render targets
+- **Analyze state** - Review GPU state at each draw call
+- **Debug shaders** - See which shaders are used for each draw
+
+## Development Iteration
+
+The trace viewer significantly speeds up graphics debugging:
+
+1. **No game restart needed** - Once you have a trace file, you don't need to restart the game to test fixes
+2. **Faster iteration** - Only rebuild and relaunch the lightweight trace viewer, not the full emulator
+3. **Reproducible testing** - The same captured frame is used for every test, ensuring consistency
+
+### Typical Debug Session
+
+```bash
+# Initial capture
+xenia.exe --trace_gpu_prefix=debug/issue_ game.xex
+# Press F4 when the issue appears
+
+# Debug in Visual Studio
+# xe-gpu-trace-viewer: debug/issue_a3c2f1.trace
+# Set breakpoints, inspect state, identify the problem
+
+# Fix the code in src/xenia/gpu/
+# Rebuild only the trace viewer
+# Relaunch and verify the fix
+```
+
+## Command Line Options
+
+### Capture Options
+
+- `--trace_gpu_prefix=<path>` - Prefix for trace file paths (required for capture)
+- `--trace_gpu_stream` - Capture all frames continuously (creates large files)
+
+### Viewer Options
+
+The trace viewer accepts a trace file path as its primary argument:
+
+```bash
+xe-gpu-trace-viewer [options] <trace_file>
+```
+
+## Related Tools
+
+- [Shader Compiler](/gpu/shader-compiler) - Translate and disassemble shaders found in traces
+- [Shader Playground](/gpu/shader-playground) - Interactive shader development and testing
+
+## Tips
+
+- **Capture at the right moment** - Press F4 right when you see the graphical glitch
+- **Use descriptive prefixes** - Name your trace files based on the issue: `--trace_gpu_prefix=traces/water_rendering_`
+- **Keep traces small** - Avoid `--trace_gpu_stream` unless you specifically need multi-frame analysis
+- **Organize your traces** - Create separate directories for different issues or games

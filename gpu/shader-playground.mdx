@@ -1,0 +1,226 @@
+---
+title: Shader Playground
+description: Interactive GUI for shader assembly, disassembly, validation, and translation
+---
+
+The Shader Playground is a GUI tool for interactive shader development, providing real-time assembly, disassembly, validation, and translation of Xbox 360 shader microcode.
+
+## Overview
+
+Built as a standalone Windows application, the Shader Playground provides a visual interface for working with Xbox 360 shaders. It integrates with the XNA Game Studio D3D compiler and `xe-gpu-shader-compiler` to provide comprehensive shader analysis.
+
+![Shader Playground Screenshot](https://github.com/xenia-project/xenia/raw/master/docs/images/shader_playground.png)
+
+## Features
+
+### Real-Time Shader Translation
+
+The Shader Playground provides multiple views of your shader code:
+
+- **Input Panel** (Left) - Enter shader microcode source
+- **Disassembly Panel** (Center) - View optimized D3D compiler output
+- **Translation Panel** (Right) - See translated shader in target format
+
+### Automatic Validation
+
+The tool automatically validates shader translation accuracy:
+
+1. XNA Game Studio D3D compiler translates microcode to binary
+2. D3D compiler disassembles the binary to show optimized form
+3. `xe-gpu-shader-compiler` disassembles the same microcode
+4. The disassembly is passed through D3D compiler
+5. **If the outputs don't match**, the panel turns red, indicating broken disassembly
+
+This validation ensures that Xenia's shader translation is accurate and matches Microsoft's reference implementation.
+
+### Format Support
+
+The Shader Playground supports translation to multiple output formats, allowing you to verify shader translation for different graphics backends.
+
+## Setup
+
+### Prerequisites
+
+The Shader Playground requires **XNA Game Studio 3.1** to be installed (not just the redistributable).
+
+<Steps>
+  <Step title="Download XNA Game Studio 3.1">
+    Download from [Microsoft's website](https://www.microsoft.com/en-us/download/details.aspx?id=39).
+  </Step>
+  
+  <Step title="Extract and install">
+    The installer may not be compatible with modern Visual Studio versions. Open `XNAGS31_setup.exe` with 7-Zip and run the included `redists.msi` directly.
+  </Step>
+  
+  <Step title="Verify installation">
+    Confirm that this file exists:
+    ```
+    C:\Program Files (x86)\Microsoft XNA\XNA Game Studio\v3.1\References\Windows\x86\Microsoft.Xna.Framework.dll
+    ```
+  </Step>
+  
+  <Step title="Configure build platform">
+    XNA is only compatible with **32-bit x86 .NET**. Ensure Visual Studio is set to target `x86` (not `Any CPU`).
+  </Step>
+</Steps>
+
+### Building
+
+The Shader Playground is built separately from the main Xenia project:
+
+<Steps>
+  <Step title="Navigate to the directory">
+    ```bash
+    cd tools/shader-playground/
+    ```
+  </Step>
+  
+  <Step title="Open the solution">
+    Open `shader-playground.sln` in Visual Studio.
+  </Step>
+  
+  <Step title="Set platform to x86">
+    In the build configuration, ensure the platform is set to **x86**, not **Any CPU**.
+  </Step>
+  
+  <Step title="Build the project">
+    Build the solution. The executable will be created in the output directory.
+  </Step>
+</Steps>
+
+## Usage
+
+### Basic Workflow
+
+<Steps>
+  <Step title="Launch Shader Playground">
+    Run the built executable from `tools/shader-playground/bin/`.
+  </Step>
+  
+  <Step title="Enter shader microcode">
+    Type or paste Xbox 360 shader microcode into the left panel.
+  </Step>
+  
+  <Step title="Review disassembly">
+    The center panel shows the D3D compiler's optimized disassembly.
+  </Step>
+  
+  <Step title="Verify translation">
+    The right panel displays the translated shader. If the validation fails, the panel will turn red.
+  </Step>
+  
+  <Step title="Debug discrepancies">
+    Use the comparison between panels to identify translation issues.
+  </Step>
+</Steps>
+
+### Integration with xe-gpu-shader-compiler
+
+For the Shader Playground to provide full functionality:
+
+1. Build `xe-gpu-shader-compiler` from the main Xenia project
+2. Ensure the executable is in your PATH or the same directory as Shader Playground
+3. The tool will automatically invoke the compiler for disassembly validation
+
+### Working with Dumped Shaders
+
+You can use the Shader Playground with shaders extracted from games:
+
+<Steps>
+  <Step title="Dump shaders from Xenia">
+    Run Xenia with `--dump_shaders=path/` to export shader microcode.
+  </Step>
+  
+  <Step title="Locate the shader binary">
+    Find the `.bin.vs` or `.bin.fs` file for the shader you want to analyze.
+  </Step>
+  
+  <Step title="Convert to text format">
+    Use `xe-gpu-shader-compiler` to disassemble to microcode text:
+    ```bash
+    xe-gpu-shader-compiler --shader_input=shader.bin.vs --shader_output=shader.txt --shader_output_type=ucode
+    ```
+  </Step>
+  
+  <Step title="Load into Shader Playground">
+    Open the disassembled text in the Shader Playground's input panel.
+  </Step>
+</Steps>
+
+## Validation Indicators
+
+### Green/Normal Panel
+
+When the translation panel appears normal (no red highlight), the shader translation is working correctly. The output from Xenia's disassembler matches the D3D compiler's reference output.
+
+### Red Panel Warning
+
+When the panel turns **red**, there is a mismatch between:
+
+- The D3D compiler's original output
+- The D3D compiler's output when processing Xenia's disassembly
+
+This indicates that `xe-gpu-shader-compiler` is producing incorrect disassembly, which may lead to rendering bugs.
+
+## Use Cases
+
+### Shader Development
+
+- Test shader translation changes in real-time
+- Validate that disassembly matches expected output
+- Experiment with microcode without running the full emulator
+
+### Debugging Rendering Issues
+
+- Load problematic shaders from [trace captures](/gpu/trace-viewer)
+- Identify where shader translation diverges from D3D reference
+- Iterate on fixes with immediate visual feedback
+
+### Learning Xbox 360 Shader Format
+
+- See how microcode maps to assembly
+- Understand shader optimization
+- Compare input and output representations
+
+## Related Tools
+
+- [Shader Compiler](/gpu/shader-compiler) - Command-line shader translation tool
+- [Trace Viewer](/gpu/trace-viewer) - Capture frames to extract shaders for analysis
+
+## Technical Details
+
+### Architecture
+
+The Shader Playground integrates multiple components:
+
+- **XNA Game Studio D3D Compiler** - Microsoft's reference compiler for validation
+- **xe-gpu-shader-compiler** - Xenia's shader translation tool
+- **Windows Forms GUI** - Interactive editor interface
+
+### Supported Shader Types
+
+- **Vertex Shaders** (`.vs`) - Transform and lighting operations
+- **Fragment/Pixel Shaders** (`.fs`) - Per-pixel color calculations
+
+### Platform Limitations
+
+- **Windows only** - Requires XNA Game Studio 3.1
+- **32-bit x86** - Not compatible with 64-bit or ARM builds
+- **Legacy .NET Framework** - Uses older .NET version due to XNA dependency
+
+## Troubleshooting
+
+### "XNA Framework not found"
+
+Ensure XNA Game Studio 3.1 is installed correctly. Check that `Microsoft.Xna.Framework.dll` exists at:
+```
+C:\Program Files (x86)\Microsoft XNA\XNA Game Studio\v3.1\References\Windows\x86\Microsoft.Xna.Framework.dll
+```
+
+### "Platform target mismatch"
+
+Verify that the project is set to build for **x86**, not **Any CPU** or **x64**.
+
+### Shader compiler not found
+
+Make sure `xe-gpu-shader-compiler.exe` is built and accessible. Place it in the same directory as the Shader Playground executable or add it to your system PATH.

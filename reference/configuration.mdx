@@ -1,0 +1,222 @@
+---
+title: Configuration
+description: Xenia configuration system, config files, and common settings
+---
+
+Xenia uses a TOML-based configuration system to customize emulator behavior. Configuration options can be set globally or per-game.
+
+## Configuration Files
+
+### Global Configuration
+
+The main configuration file is `xenia-canary.config.toml`, located in the emulator's config folder. This file is automatically created on first run and contains all available configuration options with their default values.
+
+**File Location:**
+- The config folder can be specified using the `--config` command-line argument
+- If not specified, the default location is used
+- All configuration options are organized by category (GPU, CPU, APU, etc.)
+
+### Per-Game Configuration
+
+You can override global settings for specific games by creating game-specific config files:
+
+**File Format:** `<TITLE_ID>.config.toml`  
+**Location:** `config/` subdirectory within your config folder
+
+Game configurations only need to include the options you want to override - they inherit all other settings from the global config.
+
+## Configuration System
+
+The configuration system uses the following priority order (highest to lowest):
+
+1. **Command-line arguments** - Override everything
+2. **Game-specific config** - Per-game overrides
+3. **Global config file** - User preferences
+4. **Default values** - Built-in defaults
+
+### Config File Format
+
+Configuration files use TOML format with category-based organization:
+
+```toml
+[GPU]
+vsync = true
+framerate_limit = 60
+trace_gpu_prefix = "scratch/gpu/"
+
+[CPU]
+pvr = 0x710700
+break_on_debugbreak = true
+
+[APU]
+mute = false
+```
+
+## Common Configuration Options
+
+### General Settings
+
+<ParamField path="config" type="string" default="">
+  Specifies the target config file to load. Can be an absolute path or relative to the current directory.
+</ParamField>
+
+<ParamField path="defaults_date" type="uint32" default="0">
+  Internal version of the default values in the config for seamless updates. Do not modify manually.
+</ParamField>
+
+### GPU Configuration
+
+<ParamField path="vsync" type="boolean" default="true">
+  Enable vertical synchronization. Set to `false` to render as fast as possible instead of limiting to 60Hz.
+</ParamField>
+
+<ParamField path="framerate_limit" type="uint64" default="60">
+  Maximum frames per second. Set to `0` for unlimited frames. Defaults to 60 when vsync is enabled.
+</ParamField>
+
+<ParamField path="gpu_allow_invalid_fetch_constants" type="boolean" default="true">
+  Allow texture and vertex fetch constants with invalid type. Generally unsafe but may help bypass fetch constant type errors in certain games.
+</ParamField>
+
+<ParamField path="non_seamless_cube_map" type="boolean" default="true">
+  Disable filtering between cube map faces near edges to reproduce Direct3D 9 behavior (Vulkan with VK_EXT_non_seamless_cube_map).
+</ParamField>
+
+<ParamField path="half_pixel_offset" type="boolean" default="true">
+  Enable support for vertex half-pixel offset (D3D9 PA_SU_VTX_CNTL PIX_CENTER). Disabling may cause blurriness in UI textures or incomplete pixel coverage with MSAA.
+</ParamField>
+
+<ParamField path="query_occlusion_sample_lower_threshold" type="int32" default="80">
+  Controls occlusion query behavior. Set to `-1` to disable sample counts (may cause hangs). Set to `0` to report everything as occluded.
+</ParamField>
+
+<ParamField path="query_occlusion_sample_upper_threshold" type="int32" default="100">
+  Upper threshold for occlusion queries. Must be higher than the lower threshold. Ignored if lower threshold is `-1`.
+</ParamField>
+
+### CPU Configuration
+
+<ParamField path="cpu" type="string" default="any">
+  CPU backend selection. Options: `any`, `x64`. Currently has no effect.
+</ParamField>
+
+<ParamField path="pvr" type="uint64" default="0x710700">
+  Processor Version Register value. Different Xbox 360 models used different PVR values:
+  - `0x710200` - Zephyr
+  - `0x710300` - Zephyr  
+  - `0x710500` - Jasper
+  - `0x710700` - Default (recommended)
+  - `0x710800` - Corona V1 & V2
+  
+  Some XEXs may check for specific PVR values.
+</ParamField>
+
+<ParamField path="load_module_map" type="string" default="">
+  Loads a .map file for symbol names and to diff with the generated symbol database.
+</ParamField>
+
+<ParamField path="disassemble_functions" type="boolean" default="false">
+  Disassemble functions during code generation for debugging purposes.
+</ParamField>
+
+<ParamField path="trace_functions" type="boolean" default="false">
+  Generate tracing for function statistics.
+</ParamField>
+
+<ParamField path="break_on_instruction" type="uint64" default="0">
+  Trigger a breakpoint (int3) before the given guest address is executed. Useful for debugging.
+</ParamField>
+
+<ParamField path="break_on_debugbreak" type="boolean" default="true">
+  Trigger int3 on JITed `__debugbreak` requests.
+</ParamField>
+
+### APU Configuration
+
+<ParamField path="mute" type="boolean" default="false">
+  Mute all audio output.
+</ParamField>
+
+### UI Configuration
+
+<ParamField path="headless" type="boolean" default="false">
+  Don't display any UI, using defaults for prompts as needed. Useful for automated testing.
+</ParamField>
+
+### HID Configuration
+
+<ParamField path="guide_button" type="boolean" default="true">
+  Forward guide button presses to the guest. Set to `false` to prevent the guide button from being sent to games.
+</ParamField>
+
+### Kernel Configuration
+
+<ParamField path="log_high_frequency_kernel_calls" type="boolean" default="false">
+  Log kernel calls with the kHighFrequency tag. Warning: generates significant log output.
+</ParamField>
+
+## Editing Configuration
+
+### Manual Editing
+
+You can edit configuration files directly with any text editor. The config file is well-commented with descriptions for each option.
+
+### Runtime Changes
+
+Some configuration options can be changed at runtime through the emulator UI, but most require a restart to take effect.
+
+### Config File Updates
+
+Xenia automatically updates your configuration file when:
+- New options are added to the emulator
+- Default values change
+- Option descriptions are updated
+
+Your custom values are preserved during updates.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use game configs for game-specific tweaks">
+    Instead of constantly editing the global config, create per-game configs for titles that need special settings. This keeps your global config clean and makes it easier to manage settings across different games.
+  </Accordion>
+
+  <Accordion title="Back up your config before major changes">
+    Before making significant configuration changes, make a backup copy of your config file. This makes it easy to revert if something goes wrong.
+  </Accordion>
+
+  <Accordion title="Check logs when changing settings">
+    The emulator logs the active configuration on startup. Check the log to verify your changes are being applied correctly.
+  </Accordion>
+
+  <Accordion title="Use command-line args for testing">
+    When experimenting with settings, use command-line arguments instead of editing the config file. This allows quick testing without permanently modifying your configuration.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Config Not Loading
+
+If your configuration changes aren't being applied:
+
+1. Check that the config file path is correct
+2. Verify the TOML syntax is valid (no typos in option names)
+3. Ensure the option is in the correct category section
+4. Check the log output for config parsing errors
+
+### Config File Corruption
+
+If Xenia fails to parse the config file:
+
+1. Check the error message in the log for the specific parsing error
+2. Validate your TOML syntax using an online TOML validator
+3. Delete the config file to regenerate with defaults (backup first!)
+
+### Options Not Taking Effect
+
+Some options require specific conditions:
+
+- GPU options may require a specific graphics backend
+- Some features are platform-specific (Windows/Linux)
+- Certain options only affect games that use specific Xbox 360 features

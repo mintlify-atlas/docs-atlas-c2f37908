@@ -1,0 +1,355 @@
+---
+title: "Memory Architecture"
+description: "Virtual and physical memory management in Xenia"
+---
+
+The Xenia memory subsystem emulates the Xbox 360's unified memory architecture, providing both virtual and physical memory spaces that are accessible to both CPU and GPU.
+
+## Xbox 360 Memory
+
+The Xbox 360 has a unified memory architecture:
+
+- **Total RAM**: 512 MB GDDR3 shared between CPU and GPU
+- **Memory Type**: GDDR3 (Graphics Double Data Rate 3)
+- **Bandwidth**: 22.4 GB/s to CPU, 256 GB/s to GPU via EDRAM
+- **Architecture**: Unified Memory Architecture (UMA) - CPU and GPU share same physical RAM
+
+This differs from PCs of the era which had separate system RAM and VRAM.
+
+## Memory Subsystem Overview
+
+Xenia's memory system (`src/xenia/memory.h`) maps guest memory to host address space:
+
+- **Virtual Memory Base** - Usually `0x100000000` (4GB offset)
+- **Physical Memory Base** - Usually `0x200000000` (8GB offset)
+- **Fallback** - If base addresses unavailable, shifted left 1 bit until free range found
+
+Guest code only accesses these mapped ranges, not arbitrary host memory.
+
+```cpp
+class Memory {
+  uint8_t* virtual_membase_;   // Base of virtual address space
+  uint8_t* physical_membase_;  // Base of physical address space
+  
+  std::unique_ptr<BaseHeap> virtual_heap_;
+  std::unique_ptr<BaseHeap> physical_heap_;
+  // ...
+};
+```
+
+## Memory Map
+
+The Xbox 360 uses a 32-bit address space divided into regions:
+
+```
+0x00000000 - 0x3FFFFFFF (1024 MB) - Virtual 4KB pages
+0x40000000 - 0x7FFFFFFF (1024 MB) - Virtual 64KB pages
+0x80000000 - 0x8BFFFFFF ( 192 MB) - XEX 64KB pages
+0x8C000000 - 0x8FFFFFFF (  64 MB) - XEX 64KB pages (encrypted)
+0x90000000 - 0x9FFFFFFF ( 256 MB) - XEX 4KB pages
+0xA0000000 - 0xBFFFFFFF ( 512 MB) - Physical 64KB pages (overlapped)
+0xC0000000 - 0xDFFFFFFF ( 512 MB) - Physical 16MB pages (overlapped)
+0xE0000000 - 0xFFFFFFFF ( 512 MB) - Physical 4KB pages (overlapped)
+```
+
+From `docs/cpu.md` memory section.
+
+### Virtual Memory Regions
+
+**0x00000000 - 0x7FFFFFFF** (2 GB)
+
+Dynamic virtual memory allocated by games:
+- Applications use `NtAllocateVirtualMemory` to allocate
+- 4KB or 64KB page sizes
+- Can be reserved, committed, or freed
+- Protected with read/write/execute flags
+- Used for heap allocations, stacks, data structures
+
+### XEX Regions
+
+**0x80000000 - 0x9FFFFFFF** (512 MB)
+
+Xbox Executable (XEX) image space:
+- Executable code sections
+- Read-only data sections
+- Encrypted sections (0x8C000000-0x8FFFFFFF)
+- Mix of 4KB and 64KB pages
+
+### Physical Memory Regions
+
+**0xA0000000 - 0xFFFFFFFF** (1536 MB, overlapped)
+
+Three overlapping views of physical memory:
+- **0xA0000000-0xBFFFFFFF**: 64KB pages
+- **0xC0000000-0xDFFFFFFF**: 16MB pages  
+- **0xE0000000-0xFFFFFFFF**: 4KB pages
+
+All three ranges map to the **same** physical memory, just with different page alignments.
+
+**Why overlapping regions?** Different page sizes serve different purposes:
+- 64KB pages: Standard allocations, good balance
+- 16MB pages: Large contiguous allocations (framebuffers, textures)
+- 4KB pages: Fine-grained allocations, partial page protection
+
+## Virtual to Physical Mapping
+
+Virtual pages can be mapped to physical memory:
+
+```
+Virtual 0xA0000000 == Physical 0x00000000
+Virtual 0xC0000000 == Physical 0x00000000
+Virtual 0xE0000000 == Physical 0x00000000
+```
+
+When a virtual page at 0xA0000000+ is allocated and mapped to physical memory, it points to the same physical RAM as the corresponding address in the physical memory base.
+
+### 4KB Physical Page Offset
+
+The range **0xE0000000-0xFFFFFFFF** has a special 4KB offset:
+
+- On Windows, memory mappings must be 64KB-aligned
+- This range needs 4KB granularity
+- A single 4KB offset is added when converting addresses in this range
+
+Games have code that depends on this offset (from `docs/cpu.md`):
+
+```assembly
+srwi      r9, r10, 20       # r9 = r10 >> 20
+clrlwi    r10, r10, 3       # r10 = r10 & 0x1FFFFFFF (physical address)
+addi      r11, r9, 0x200
+rlwinm    r11, r11, 0,19,19 # r11 = r11 & 0x1000
+add       r11, r11, r10     # add 1 page to addresses > 0xE0000000
+# r11 = address passed to GPU
+```
+
+This calculates whether to add the page offset based on the address range.
+
+## Heap Management
+
+Memory is managed through heap objects (`src/xenia/memory.h:102`):
+
+```cpp
+class BaseHeap {
+  uint32_t heap_base_;          // Offset from membase
+  uint32_t heap_size_;          // Size of heap range
+  uint32_t page_size_;          // Size of each page (4KB, 64KB, etc.)
+  uint32_t host_address_offset_; // Offset for address translation
+  std::vector<PageEntry> page_table_; // Page table
+  // ...
+};
+```
+
+### Page Table
+
+Each heap maintains a page table describing allocations:
+
+```cpp
+union PageEntry {
+  uint64_t qword;
+  struct {
+    uint32_t base_address : 20;        // Base of allocation (in pages)
+    uint32_t region_page_count : 20;   // Size of allocation (in pages)
+    uint32_t allocation_protect : 4;   // Protection at allocation time
+    uint32_t current_protect : 4;      // Current protection flags
+    uint32_t state : 2;                // Reserve/commit state
+    uint32_t reserved : 14;
+  };
+};
+```
+
+From `src/xenia/memory.h:82`.
+
+The page table tracks:
+- Which pages are allocated vs free
+- Protection flags (read/write/execute)
+- Whether pages are reserved or committed
+- Size of each allocation region
+
+### Allocation Strategy
+
+Heaps support two allocation strategies:
+
+**Bottom-up** (default):
+- Search from low addresses toward high
+- Allocates predictable locations
+- Matches most game expectations
+
+**Top-down**:
+- Search from high addresses toward low  
+- Used by some system allocations
+- Reduces fragmentation for certain patterns
+
+### Memory Protection
+
+Pages have protection flags (from `src/xenia/memory.h:51`):
+
+```cpp
+enum MemoryProtectFlag : uint32_t {
+  kMemoryProtectRead = 1 << 0,
+  kMemoryProtectWrite = 1 << 1,
+  kMemoryProtectNoCache = 1 << 2,
+  kMemoryProtectWriteCombine = 1 << 3,
+  kMemoryProtectNoAccess = 0,
+};
+```
+
+Protection is enforced by:
+- Host OS page protection (where possible)
+- Manual checks in memory access code
+- MMU handlers for invalid accesses
+
+## Allocation Functions
+
+Games allocate memory through kernel functions:
+
+### NtAllocateVirtualMemory
+
+Allocates virtual memory:
+
+```cpp
+dword_result_t NtAllocateVirtualMemory(
+    lpdword_t base_addr_ptr,
+    lpdword_t region_size_ptr,
+    dword_t allocation_type,   // Reserve, Commit
+    dword_t protect            // Protection flags
+);
+```
+
+- Allocates from 0x00000000-0x7FFFFFFF range
+- Can reserve address space without committing
+- Sets protection flags
+
+### MmAllocatePhysicalMemoryEx
+
+Allocates physical memory:
+
+```cpp
+dword_result_t MmAllocatePhysicalMemoryEx(
+    dword_t flags,
+    dword_t region_size,
+    dword_t protect,
+    dword_t min_addr,
+    dword_t max_addr,
+    dword_t alignment
+);
+```
+
+- Allocates from physical memory (0x00000000+ in physical base)
+- Accessible via 0xA0000000+ virtual addresses
+- GPU can access physical memory directly
+- Used for framebuffers, textures, command buffers
+
+## Memory-Mapped I/O (MMIO)
+
+Certain address ranges trigger I/O instead of memory access:
+
+- **GPU registers**: Writes to register addresses update GPU state
+- **Audio registers**: Control audio hardware
+- **Hardware registers**: Other hardware control
+
+MMIO is handled by `MMIOHandler` (`src/xenia/cpu/mmio_handler.h`):
+
+1. Access to MMIO range triggers page fault
+2. Exception handler intercepts fault
+3. Handler dispatches to appropriate I/O handler
+4. Result returned to CPU
+
+This allows transparent interception of hardware accesses.
+
+## Address Translation
+
+Translating guest addresses to host pointers:
+
+### Virtual Address Translation
+
+```cpp
+uint8_t* TranslateVirtual(uint32_t guest_addr) {
+  return virtual_membase_ + guest_addr;
+}
+```
+
+Simple offset since entire 32-bit space is mapped.
+
+### Physical Address Translation  
+
+Depends on which virtual window is used:
+
+```cpp
+// 0xA0000000-0xBFFFFFFF: Direct mapping
+phys_addr = guest_addr - 0xA0000000;
+
+// 0xE0000000-0xFFFFFFFF: Add 4KB offset
+phys_addr = guest_addr - 0xE0000000;
+host_ptr = physical_membase_ + phys_addr + 0x1000;
+```
+
+The host address offset handles the 4KB alignment issue.
+
+## Shared Memory
+
+CPU and GPU share the same physical memory:
+
+- CPU writes command buffers to RAM
+- GPU reads commands from same addresses
+- CPU writes vertex/index buffers
+- GPU reads geometry from same addresses
+- GPU writes framebuffers to RAM
+- CPU can read back results
+
+This shared model requires careful synchronization:
+- Memory barriers ensure visibility
+- Cache coherency must be managed
+- Synchronization primitives prevent races
+
+## Memory Debugging
+
+### Heap Dumping
+
+`BaseHeap::DumpMap()` logs all allocations:
+
+```
+Heap: Virtual 4KB
+  0x00010000-0x0001FFFF (64 KB) - RW-
+  0x00020000-0x0002FFFF (64 KB) - R--
+  ...
+```
+
+Useful for:
+- Tracking memory leaks
+- Understanding allocation patterns  
+- Debugging memory corruption
+
+### Page Fault Logging
+
+Accesses to unmapped memory trigger page faults:
+- Exception handler logs fault address
+- Helps identify bugs in guest code or emulator
+- Stack traces show code leading to fault
+
+## Performance Considerations
+
+### Memory Mapping Overhead
+
+Mapping the entire 32-bit address space consumes host virtual address space:
+- 64-bit hosts: 4GB per memory base is negligible
+- 32-bit hosts: Not supported (not enough address space)
+
+### Page Protection
+
+Changing page protection is expensive:
+- Requires OS syscalls (mprotect, VirtualProtect)
+- Can flush TLBs
+- Games that frequently change protection may slow down
+
+### Cache Coherency
+
+Shared CPU/GPU memory requires coherency management:
+- CPU writes may need explicit flushing
+- GPU reads may need invalidation
+- Modern hosts handle this automatically in most cases
+
+## References
+
+- Memory management kernel functions in `src/xenia/kernel/xboxkrnl/xboxkrnl_memory.cc`
+- Memory class implementation in `src/xenia/memory.cc`
+- Heap implementations in `src/xenia/base/memory.h`

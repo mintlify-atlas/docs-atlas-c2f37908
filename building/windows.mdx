@@ -1,0 +1,290 @@
+---
+title: 'Building on Windows'
+description: 'Complete guide to building Xenia on Windows'
+---
+
+## Requirements
+
+<Info>
+  Windows 10 or later is required. Xenia requires 64-bit Windows.
+</Info>
+
+### Required Software
+
+1. **[Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)**
+   - Community, Professional, or Enterprise edition
+   - Install the "Desktop development with C++" workload
+
+2. **Windows 11 SDK**
+   - Version 10.0.22000.0 or newer
+   - Installed via Visual Studio Installer
+
+3. **[Python 3.9+ (64-bit)](https://www.python.org/downloads/)**
+   - **Important**: Ensure Python is added to PATH during installation
+   - Verify it's 64-bit by running: `python -c "import sys; print(sys.maxsize > 2**32)"`
+
+4. **CMake 3.10+**
+   - Can be installed via Visual Studio (C++ CMake tools for Windows)
+   - Or download from [cmake.org](https://cmake.org/download/)
+
+5. **[Git for Windows](https://git-scm.com/download/win)**
+
+## Build Instructions
+
+<Steps>
+  <Step title="Clone the Repository">
+    Open PowerShell or Command Prompt:
+    
+    ```bash
+    git clone https://github.com/xenia-canary/xenia-canary.git
+    cd xenia-canary
+    ```
+  </Step>
+
+  <Step title="Run Initial Setup">
+    This will initialize submodules and generate Visual Studio project files:
+    
+    ```bash
+    xb setup
+    ```
+    
+    The setup command performs:
+    - Git submodule initialization and update
+    - Runs premake to generate `build/xenia.sln`
+    - Generates `build/version.h` with git version info
+  </Step>
+
+  <Step title="Build from Command Line">
+    Build in debug mode:
+    
+    ```bash
+    xb build
+    ```
+    
+    Build in release mode:
+    
+    ```bash
+    xb build --config=release
+    ```
+    
+    Build specific targets:
+    
+    ```bash
+    xb build --target=xenia-app --target=xenia-vfs-dump
+    ```
+  </Step>
+
+  <Step title="Or Build with Visual Studio">
+    Open Visual Studio and run the xenia-app project:
+    
+    ```bash
+    xb devenv
+    ```
+    
+    This will:
+    - Run premake to ensure projects are up to date
+    - Launch Visual Studio with `build/xenia.sln`
+    - Set xenia-app as the startup project
+  </Step>
+</Steps>
+
+## Build Configurations
+
+Xenia supports three build configurations:
+
+<CardGroup cols={3}>
+  <Card title="Debug" icon="bug">
+    Full debugging symbols, no optimizations. Best for development.
+    
+    ```bash
+    xb build --config=debug
+    ```
+  </Card>
+  
+  <Card title="Checked" icon="check">
+    Optimized build with debug checks enabled.
+    
+    ```bash
+    xb build --config=checked
+    ```
+  </Card>
+  
+  <Card title="Release" icon="rocket">
+    Fully optimized build for production use.
+    
+    ```bash
+    xb build --config=release
+    ```
+  </Card>
+</CardGroup>
+
+## Visual Studio Debugging
+
+<Warning>
+  Visual Studio behaves oddly with debug paths by default. Follow these steps to configure debugging properly.
+</Warning>
+
+### Configure Debug Settings
+
+1. Right-click the **xenia-app** project in Solution Explorer
+2. Select **Properties**
+3. Navigate to **Configuration Properties** → **Debugging**
+4. Set the following:
+
+| Property | Value |
+|----------|-------|
+| **Command** | `$(SolutionDir)$(TargetPath)` |
+| **Working Directory** | `$(SolutionDir)..\..` |
+| **Command Arguments** | `--log_file=stdout game.xex` (or other flags) |
+
+### Useful Debug Flags
+
+```bash
+# Log to console instead of file
+--log_file=stdout
+
+# Use a flag file for complex configurations
+--flagfile=flags.txt
+
+# Enable source annotations for JIT code inspection
+--emit_source_annotations
+
+# Specify custom log file
+--log_file=xenia.log
+```
+
+<Tip>
+  When debugging JIT code (around address 0xA0000000), use `--emit_source_annotations` to get helpful spacers and mov instructions in the disassembly.
+</Tip>
+
+## Common Build Commands
+
+<CodeGroup>
+
+```bash Debug Build
+# Full rebuild in debug mode
+xb build --config=debug --force
+```
+
+```bash Release Build  
+# Build release version
+xb build --config=release
+```
+
+```bash Specific Target
+# Build only xenia-app
+xb build --target=xenia-app
+```
+
+```bash Clean Build
+# Clean and rebuild
+xb clean
+xb build
+```
+
+</CodeGroup>
+
+## Updating Your Build
+
+When pulling latest changes from the repository:
+
+<Steps>
+  <Step title="Use the pull command">
+    ```bash
+    xb pull
+    ```
+    
+    This automatically:
+    - Switches to the canary_experimental branch
+    - Pulls latest changes with rebase
+    - Updates git submodules
+    - Runs premake to update project files
+  </Step>
+  
+  <Step title="Rebuild">
+    ```bash
+    xb build
+    ```
+  </Step>
+</Steps>
+
+Or manually:
+
+```bash
+git pull --rebase
+git submodule update --init --depth=1
+xb premake
+xb build
+```
+
+## Build Output Location
+
+Built binaries are located in:
+
+```
+build/bin/Windows/<Configuration>/
+```
+
+Where `<Configuration>` is:
+- `Debug/` - Debug builds
+- `Checked/` - Checked builds  
+- `Release/` - Release builds
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Visual Studio not found">
+    Ensure Visual Studio 2022 (version 17.x) is installed. The build script uses `vswhere.exe` to locate Visual Studio.
+    
+    If you have multiple versions installed, the latest version will be used.
+  </Accordion>
+
+  <Accordion title="Windows SDK version mismatch">
+    Install Windows 11 SDK version 10.0.22000.0 or newer via Visual Studio Installer:
+    
+    1. Open Visual Studio Installer
+    2. Click "Modify" on your VS 2022 installation
+    3. Go to "Individual components"
+    4. Search for "Windows 11 SDK"
+    5. Select version 10.0.22000.0 or newer
+  </Accordion>
+
+  <Accordion title="Python 32-bit vs 64-bit error">
+    Xenia requires 64-bit Python. Verify with:
+    
+    ```bash
+    python -c "import sys; print('64-bit' if sys.maxsize > 2**32 else '32-bit')"
+    ```
+    
+    If it shows 32-bit, uninstall and reinstall Python 64-bit.
+  </Accordion>
+
+  <Accordion title="MSBuild errors">
+    If you encounter MSBuild errors, try:
+    
+    1. Run `xb premake` to regenerate project files
+    2. Clean the build: `xb clean`
+    3. Rebuild: `xb build --force`
+  </Accordion>
+
+  <Accordion title="Git submodule failures">
+    If submodules fail to update:
+    
+    ```bash
+    git submodule update --init --depth=1 -j 8
+    ```
+    
+    Or delete the `third_party` directory and run `xb setup` again.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="xb Build Script" icon="terminal" href="/building/xb-script">
+    Learn about all available xb commands
+  </Card>
+  <Card title="Code Formatting" icon="code" href="/building/xb-script#format-code">
+    Format your code with clang-format
+  </Card>
+</CardGroup>

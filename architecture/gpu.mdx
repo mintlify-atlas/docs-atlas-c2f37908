@@ -1,0 +1,320 @@
+---
+title: "GPU Architecture"
+description: "Xenos GPU emulation, command processing, and rendering"
+---
+
+The Xenia GPU subsystem emulates the Xbox 360's custom AMD Xenos graphics chip. The Xenos was based on the R5xx architecture with unified shader processors and integrated 10MB of EDRAM for high-bandwidth framebuffer operations.
+
+## The Xenos Chip
+
+The [Xenos](https://en.wikipedia.org/wiki/Xenos_(graphics_chip)) was a revolutionary GPU for its time (2005):
+
+- **Architecture**: AMD R5xx-based unified shader architecture
+- **Shader Processors**: 48 unified shader processors (240 shader operations/cycle)
+- **Clock Speed**: 500 MHz
+- **Memory**: 10MB embedded DRAM (EDRAM) on-die
+- **Memory Bandwidth**: 256 GB/s to EDRAM, 22.4 GB/s to main RAM
+- **DirectX**: DirectX 9.0c with some DirectX 10 features
+
+### Unified Shader Architecture
+
+Unlike previous GPUs with separate vertex and pixel shader units, the Xenos used unified shader processors that could execute any type of shader. This improved resource utilization and was a precursor to modern GPU architectures.
+
+### EDRAM
+
+The 10MB of embedded DRAM sat on the same package as the GPU die:
+
+- Stored render targets and depth buffers
+- Performed hardware anti-aliasing (2x, 4x MSAA)
+- Hardware resolve operations (copy from EDRAM to main RAM)
+- Tiling for framebuffers larger than 10MB
+
+EDRAM was crucial for achieving 720p rendering with anti-aliasing at acceptable framerates.
+
+## Command Processing
+
+The Xenos processes commands from a ringbuffer in system memory, similar to modern GPUs.
+
+### Command Ringbuffer
+
+The DirectX driver writes commands to a ringbuffer:
+
+1. CPU writes PM4 commands and data to ringbuffer in system memory
+2. CPU updates write pointer register on GPU
+3. GPU's command processor fetches commands from ringbuffer
+4. GPU executes commands and updates read pointer
+
+This asynchronous design allows CPU and GPU to work in parallel.
+
+### Command Processor
+
+Implementation: `src/xenia/gpu/command_processor.cc`
+
+The command processor:
+
+- Runs on a dedicated thread, mimicking hardware behavior
+- Fetches and decodes PM4 packets from the ringbuffer
+- Executes commands (state changes, draws, memory operations)
+- Manages GPU registers via `RegisterFile`
+- Synchronizes with CPU via events and interrupts
+
+**Key Components:**
+
+```cpp
+class CommandProcessor {
+  // Ring buffer for reading commands
+  RingBuffer reader_;
+  
+  // Active shaders
+  Shader* active_vertex_shader_;
+  Shader* active_pixel_shader_;
+  
+  // GPU register state
+  RegisterFile* register_file_;
+  
+  // Graphics backend (Vulkan, D3D12)
+  // Performs actual rendering
+};
+```
+
+From `src/xenia/gpu/command_processor.h`.
+
+### PM4 Commands
+
+PM4 (Packet Manager version 4) is the command format used by AMD GPUs. Commands are documented in `src/xenia/gpu/xenos.h:521`.
+
+**Common Commands:**
+
+- **PM4_DRAW_INDX** - Draw primitives with index buffer
+- **PM4_SET_CONSTANT** - Set shader constants
+- **PM4_LOAD_SHADER** - Load vertex/pixel shader
+- **PM4_SET_CONTEXT_REG** - Set context register
+- **PM4_WAIT_REG_MEM** - Wait for memory/register condition
+- **PM4_EVENT_WRITE** - Signal completion event
+
+Each command is a packet with an opcode and optional data payload.
+
+### Register File
+
+GPU state is managed through memory-mapped registers (`src/xenia/gpu/register_table.inc`):
+
+- **Context registers** - Per-draw state (blend, depth, rasterizer)
+- **Shader registers** - Shader bindings and constants
+- **Control registers** - Command processor state
+
+Registers are accessed via PM4 commands and are documented in the register table.
+
+## Shader Translation
+
+Xenos shaders use a custom microcode format that must be translated to modern shader languages.
+
+### Shader Microcode
+
+Xenos microcode is a binary format with:
+
+- **Vertex shaders** - Transform vertices and output attributes
+- **Pixel shaders** - Compute per-pixel colors and depth
+- **Instruction set** - Similar to R5xx/R6xx AMD GPUs
+- **Control flow** - Loops, branches, subroutine calls
+
+### Translation Pipeline
+
+1. **Disassembly** - Decode binary microcode to readable assembly
+2. **Analysis** - Identify inputs, outputs, control flow, texture fetches
+3. **Translation** - Convert to SPIR-V (Vulkan) or DXBC (D3D12)
+4. **Compilation** - Driver compiles to native GPU code
+
+**Translator Implementations:**
+
+- Vulkan: Translates to SPIR-V
+- D3D12: Translates to DXBC (DirectX Bytecode)
+
+Both backends share common shader analysis logic.
+
+### Shader Caching
+
+Shaders are cached to avoid retranslating:
+
+- Microcode hash is used as cache key
+- Translated shaders are stored on disk
+- Cache is loaded on startup
+- Reduces shader compilation stutter
+
+## EDRAM Emulation
+
+The 10MB EDRAM presented a unique challenge for emulation.
+
+### EDRAM Layout
+
+EDRAM is organized as:
+
+- 2048 tiles of 5120 bytes each (10MB total)
+- Each tile is 80x16 pixels at 32-bit color
+- Games configure EDRAM via render target registers
+- Multiple render targets can be bound simultaneously
+
+### Emulation Strategies
+
+**Approach 1: Resolve-based**
+- Render to EDRAM-sized buffer (10MB)
+- Resolve (copy) to system RAM when game requests it
+- System RAM textures used for display and sampling
+
+**Approach 2: Virtual EDRAM**
+- Use modern GPU's memory as virtual EDRAM
+- Render targets live in GPU memory
+- Resolve operations copy between GPU textures
+
+Xenia uses a hybrid approach depending on the scenario.
+
+### Tiling
+
+Games rendering at resolutions larger than 10MB use tiling:
+
+1. Divide framebuffer into tiles that fit in EDRAM
+2. Render each tile separately
+3. Resolve each tile to system RAM
+4. Combine tiles to form complete framebuffer
+
+Emulating tiling requires:
+- Detecting when games use tiling
+- Rendering each tile to separate render targets
+- Combining tiles for display
+
+## Graphics Backends
+
+Xenia supports multiple graphics backends:
+
+### Vulkan Backend
+
+The Vulkan backend (`src/xenia/gpu/vulkan/`) provides:
+
+- SPIR-V shader translation
+- Explicit resource management
+- Better performance on Linux and some Windows configurations
+- More manual control over GPU operations
+
+**Configuration:** `src/xenia/gpu/vulkan/vulkan_gpu_flags.cc`
+
+- `--vulkan_dump_disasm=true` - Dump shader disassembly (NVIDIA only)
+
+### D3D12 Backend
+
+The D3D12 backend (`src/xenia/gpu/d3d12/`) provides:
+
+- DXBC shader translation
+- Better compatibility on Windows
+- PIX integration for debugging
+- DirectX 12 feature level 11_0+
+
+## GPU Options
+
+From `src/xenia/gpu/gpu_flags.cc`:
+
+- `--vsync=false` - Render as fast as possible instead of 60Hz
+- `--dump_shaders=path/` - Dump all translated shaders to disk
+- `--trace_gpu_prefix=path/` - Capture GPU traces for debugging
+- `--trace_gpu_stream` - Record all frames to trace file
+
+## Tools
+
+### Shader Compiler
+
+`xe-gpu-shader-compiler` is a standalone tool for shader translation:
+
+```bash
+xe-gpu-shader-compiler \
+    --shader_input=input_file.bin.vs \
+    --shader_output=output_file.txt \
+    --shader_output_type=spirvtext
+```
+
+Useful for:
+- Testing shader translation
+- Debugging shader issues
+- Analyzing microcode format
+
+Binaries use `.bin.vs` for vertex shaders, `.bin.ps` for pixel shaders.
+
+### Shader Playground
+
+GUI tool for interactive shader work (`tools/shader-playground/`):
+
+![Shader Playground](https://github.com/xenia-project/xenia/blob/master/docs/images/shader_playground.png?raw=true)
+
+Features:
+- Assemble shader microcode
+- Disassemble binary shaders
+- Translate to target language (SPIR-V, etc.)
+- Validate translation correctness
+- Compare against reference output
+
+See `tools/shader-playground/README.md` for setup instructions.
+
+### GPU Trace Viewer
+
+`xe-gpu-trace-viewer` allows frame capture and inspection:
+
+**Workflow:**
+
+1. Run game with `--trace_gpu_prefix=path/frame_`
+2. Press F4 to capture current frame
+3. Open trace file in `xe-gpu-trace-viewer`
+4. Inspect draw calls, state, shaders, textures
+5. Modify code and rebuild to test fixes
+
+**Capturing Streams:**
+
+Use `--trace_gpu_stream` to capture all frames to a single file. Warning: files get very large.
+
+## Performance Counters
+
+The GPU exposes performance counters that D3D can query. These are 64-bit values with HIGH/LOW/SELECT registers.
+
+Counters documented in `src/xenia/gpu/xenos.h` and original docs include:
+
+- CP_PERFCOUNTER0 - Command processor metrics
+- RBBM_PERFCOUNTER0/1 - Resource block metrics  
+- SQ_PERFCOUNTER0-3 - Sequencer (shader) metrics
+- VGT_PERFCOUNTER0-3 - Vertex Grouper/Tessellator metrics
+- And many more (see `docs/gpu.md` for full list)
+
+Emulating these is low priority but may be needed for some games.
+
+## Challenges and Limitations
+
+### EDRAM Tiling
+
+Detecting and handling tiling is complex:
+- Games don't explicitly declare tiling usage
+- Must infer from render target configuration
+- Incorrect tiling detection causes rendering bugs
+
+### Shader Accuracy
+
+Xenos microcode doesn't map 1:1 to modern shaders:
+- Some instructions have no direct equivalent
+- Precision differences between GPUs
+- Control flow handling differs
+- Texture sampling behavior varies
+
+### Synchronization
+
+Games expect certain GPU/CPU synchronization patterns:
+- Wait for GPU events before reading results
+- Memory coherency between CPU and GPU
+- Command buffer execution order
+
+Emulating these correctly is critical for stability.
+
+## References
+
+### Xenos Architecture
+
+- [Free60 Xenos Info](https://free60project.github.io/wiki/Xenos)
+- [Xenos Wikipedia](https://en.wikipedia.org/wiki/Xenos_(graphics_chip))
+
+### Shader Formats
+
+- [LLVM R600 Tables](https://llvm.org/viewvc/llvm-project/llvm/trunk/lib/Target/AMDGPU/R600Instructions.td) - Opcode reference (formats differ but names/semantics match)
+- [xemit](https://github.com/gligli/libxemit/blob/master/xemitops.c) - Alternative shader emitter

@@ -1,0 +1,290 @@
+---
+title: Debugging Xenia
+description: Tools and techniques for debugging the Xenia emulator
+---
+
+Debugging Xenia requires understanding its build system, command-line flags, and debugging tools. This guide covers debugging on different platforms.
+
+## Visual Studio (Windows)
+
+VS behaves oddly with debug paths, so you need to configure the project properties correctly.
+
+### Setting Up Debug Configuration
+
+1. Open the **xenia-app** project properties
+2. Set the following values:
+   - **Command**: `$(SolutionDir)$(TargetPath)`
+   - **Working Directory**: `$(SolutionDir)..\.."`
+
+3. In the **Command Arguments** field, specify:
+   - Command-line flags
+   - The file to run
+   - Or use `--flagfile=flags.txt` to load flags from a file
+
+<Tip>
+Using a flag file (`--flagfile=flags.txt`) makes it easier to manage complex configurations and share settings across debugging sessions.
+</Tip>
+
+### Example Command Arguments
+
+```
+--log_file=stdout C:\Games\Default.xex
+```
+
+Or with a flag file:
+
+```
+--flagfile=flags.txt C:\Games\Default.xex
+```
+
+## Command-Line Arguments
+
+Xenia supports numerous command-line arguments for debugging and configuration. Here are the most important ones for debugging:
+
+### Log Files
+
+By default, logs are written to a file with the name of the executable.
+
+**Override the log file location:**
+
+```bash
+xenia-canary.exe --log_file=log.txt game.xex
+```
+
+**Log to console (stdout):**
+
+```bash
+xenia-canary.exe --log_file=stdout game.xex
+```
+
+<Tip>
+Using `--log_file=stdout` is especially useful during development because you can see logs in real-time in your IDE's output window.
+</Tip>
+
+### JIT Code Analysis
+
+When debugging JIT-compiled code in Visual Studio, the disassembly around address `0xA0000000` can be difficult to read.
+
+**Enable source annotations:**
+
+```bash
+xenia-canary.exe --emit_source_annotations game.xex
+```
+
+This flag adds helpful spacers and `mov` instructions in the disassembly, making it easier to understand the generated code.
+
+<Note>
+The `--emit_source_annotations` flag is specifically useful when examining JIT-compiled code in a debugger. It adds markers that help you correlate the assembly with the original PowerPC instructions.
+</Note>
+
+### Common Debug Flags
+
+Here are additional flags commonly used during debugging:
+
+```bash
+# Launch in windowed mode
+--fullscreen=false
+
+# Set window size
+--window_width=1280 --window_height=720
+
+# Enable verbose logging
+--log_level=2
+
+# Load a specific flag file
+--flagfile=debug_flags.txt
+```
+
+## Linux Debugging
+
+<Warning>
+Linux support is extremely experimental and presently incomplete.
+</Warning>
+
+### Building for Debug
+
+Normal building via `xb build` uses CMake + Ninja. To build with debug symbols:
+
+```bash
+xb build --config=debug
+```
+
+### Using GDB
+
+Debug with GDB:
+
+```bash
+gdb ./build/bin/xenia-canary
+```
+
+Within GDB:
+
+```gdb
+# Set command-line arguments
+set args --log_file=stdout /path/to/game.xex
+
+# Run the program
+run
+
+# Set breakpoints
+break main
+break some_function
+
+# Continue execution
+continue
+```
+
+### Using Valgrind
+
+Check for memory issues with Valgrind:
+
+```bash
+valgrind --leak-check=full ./build/bin/xenia-canary game.xex
+```
+
+<Note>
+Make sure you have `valgrind` installed: `sudo apt-get install valgrind`
+</Note>
+
+## Setting Up Your Development Environment
+
+To make debugging easier, set program startup arguments in your IDE.
+
+### Visual Studio
+
+1. Right-click **xenia-app** project
+2. Select **Properties**
+3. Go to **Debugging**
+4. Set **Command Arguments**:
+
+```
+--log_file=stdout C:\Path\To\Default.xex
+```
+
+This configuration logs to console and starts the emulator immediately with a game loaded.
+
+### CLion / Other IDEs
+
+For CMake-based IDEs like CLion:
+
+1. Open **Run/Debug Configurations**
+2. Set **Program arguments**:
+
+```
+--log_file=stdout /path/to/Default.xex
+```
+
+3. Set **Working directory** to the project root
+
+## Debugging Tips
+
+### Analyzing JIT Code
+
+When debugging the JIT compiler:
+
+1. **Enable source annotations**: Use `--emit_source_annotations`
+2. **Set breakpoints** in the JIT code generator functions
+3. **Examine memory** around `0xA0000000` where JIT code is placed
+4. **Use disassembly view** to see generated x86/x64 code
+
+### Debugging Graphics Issues
+
+1. **Enable GPU logging**: Check for GPU-related flags in the code
+2. **Use graphics debuggers**: Tools like RenderDoc can capture frames
+3. **Check shader compilation**: Look for shader errors in logs
+4. **Verify state changes**: Watch for unexpected GPU state transitions
+
+### Debugging Audio Issues
+
+1. **Check XMA decoder**: Audio uses the XMA hardware decoder
+2. **Monitor audio buffers**: Look for underruns or overruns
+3. **Verify timing**: Audio issues often relate to timing problems
+
+### Debugging CPU Emulation
+
+1. **Enable instruction tracing**: Some builds support detailed CPU traces
+2. **Check register state**: Examine PowerPC register values
+3. **Verify memory access**: Watch for invalid memory operations
+4. **Compare with hardware**: Use known good values from real Xbox 360
+
+<Warning>
+Remember: Never use information from official Xbox Development Kits (XDKs) when debugging. All debugging should be based on reverse engineering legally-owned games and public information.
+</Warning>
+
+## Common Issues
+
+### Issue: Logs Not Appearing
+
+**Solution**: Make sure you're using `--log_file=stdout` or check the default log file location (usually next to the executable).
+
+### Issue: Can't Set Breakpoints
+
+**Solution**: Ensure you're building in Debug configuration (`xb build --config=debug` or Debug configuration in Visual Studio).
+
+### Issue: Game Crashes Immediately
+
+**Solution**: 
+- Check logs for error messages
+- Verify the game file is not corrupted
+- Try with `--log_level=2` for verbose output
+- Check if the game is known to work (see compatibility list)
+
+### Issue: JIT Disassembly Is Unreadable
+
+**Solution**: Use the `--emit_source_annotations` flag to add markers in the generated code.
+
+## Advanced Debugging
+
+### Creating Flag Files
+
+Create a `debug_flags.txt` file with commonly used flags:
+
+```text
+--log_file=stdout
+--emit_source_annotations
+--fullscreen=false
+--window_width=1280
+--window_height=720
+--log_level=2
+```
+
+Then run:
+
+```bash
+xenia-canary.exe --flagfile=debug_flags.txt game.xex
+```
+
+### Debugging Build Issues
+
+If you encounter build errors:
+
+1. **Update dependencies**: Run `xb setup` again
+2. **Clean build**: Use `xb build --clean`
+3. **Check LLVM version**: Ensure you have the correct version for your platform
+4. **Update submodules**: Run `git submodule update --init --recursive`
+
+### Profiling Performance
+
+For performance debugging:
+
+1. **Use built-in profilers**: Some builds include profiling support
+2. **External tools**: Use tools like VTune (Windows) or perf (Linux)
+3. **Check frame times**: Monitor frame rendering performance
+4. **Profile hotspots**: Identify slow functions and optimize
+
+## Getting Help
+
+If you're stuck debugging an issue:
+
+1. **Check the logs**: Most issues leave traces in the log files
+2. **Search existing issues**: Someone may have encountered the same problem
+3. **Ask on Discord**: Join the `#dev` channel on the [Xenia Discord](https://discord.gg/Q9mxZf9)
+4. **Provide details**: When asking for help, include:
+   - Log output
+   - Steps to reproduce
+   - System configuration
+   - Game title ID (not the game name)
+
+<Tip>
+When reporting issues, use the game's title ID (displayed in the title bar) instead of the game name to avoid trademark issues.
+</Tip>

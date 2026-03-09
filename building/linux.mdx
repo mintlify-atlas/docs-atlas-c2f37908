@@ -1,0 +1,377 @@
+---
+title: 'Building on Linux'
+description: 'Guide to building Xenia on Linux (experimental)'
+---
+
+<Warning>
+  Linux support is **extremely experimental** and presently **incomplete**. Many features may not work correctly or at all.
+</Warning>
+
+## Requirements
+
+### System Requirements
+
+- 64-bit Linux distribution (up to date)
+- Clang 19 or newer (GCC is not officially supported)
+- Vulkan-capable GPU with up-to-date drivers
+- Python 3.9+ (64-bit)
+
+### Build Tools
+
+The build script uses:
+- **CMake** for project generation
+- **Ninja** as the build system
+- **Clang 19** as the compiler (not GCC)
+
+<Note>
+  While GCC should work in theory, it is not easily interchangeable with Clang in the current build setup. Use Clang 19 or newer.
+</Note>
+
+## Environment Variables
+
+The build system respects these environment variables:
+
+| Variable | Default Value | Description |
+|----------|---------------|-------------|
+| `CC` | `clang` | C compiler |
+| `CXX` | `clang++` | C++ compiler |
+
+Example:
+
+```bash
+export CC=clang-19
+export CXX=clang++-19
+```
+
+## Installing Dependencies
+
+### Ubuntu/Debian
+
+<Steps>
+  <Step title="Install Required Packages">
+    ```bash
+    sudo apt-get install build-essential mesa-vulkan-drivers valgrind \
+      libc++-dev libc++abi-dev libgtk-3-dev liblz4-dev libsdl2-dev \
+      libvulkan-dev libx11-xcb-dev clang-19 llvm-19 ninja-build \
+      python3 git
+    ```
+  </Step>
+
+  <Step title="Verify Clang Installation">
+    ```bash
+    clang-19 --version
+    ```
+    
+    Should show Clang version 19 or newer.
+  </Step>
+
+  <Step title="Install Vulkan Drivers">
+    Ensure you have up-to-date Vulkan libraries and drivers for your hardware:
+    
+    **NVIDIA:**
+    ```bash
+    # Usually included in proprietary drivers
+    sudo apt-get install nvidia-driver-xxx vulkan-tools
+    ```
+    
+    **AMD:**
+    ```bash
+    sudo apt-get install mesa-vulkan-drivers vulkan-tools
+    ```
+    
+    **Intel:**
+    ```bash
+    sudo apt-get install mesa-vulkan-drivers intel-media-va-driver vulkan-tools
+    ```
+    
+    Verify Vulkan:
+    ```bash
+    vulkaninfo | grep "Vulkan Instance Version"
+    ```
+  </Step>
+</Steps>
+
+### Fedora/RHEL
+
+```bash
+sudo dnf install clang llvm lld libc++ libc++abi ninja-build cmake \
+  vulkan-loader-devel vulkan-headers SDL2-devel gtk3-devel \
+  lz4-devel libX11-devel python3 git
+```
+
+### Arch Linux
+
+```bash
+sudo pacman -S clang llvm lld libc++ ninja cmake vulkan-icd-loader \
+  vulkan-headers sdl2 gtk3 lz4 libx11 python git
+```
+
+## Build Instructions
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/xenia-canary/xenia-canary.git
+    cd xenia-canary
+    ```
+  </Step>
+
+  <Step title="Set Environment Variables (Optional)">
+    If you need to specify Clang 19 explicitly:
+    
+    ```bash
+    export CC=clang-19
+    export CXX=clang++-19
+    ```
+  </Step>
+
+  <Step title="Run Initial Setup">
+    ```bash
+    xb setup
+    ```
+    
+    Or with explicit target OS:
+    ```bash
+    xb setup --target_os=linux
+    ```
+  </Step>
+
+  <Step title="Build the Project">
+    Build in debug mode:
+    
+    ```bash
+    xb build
+    ```
+    
+    Build in release mode:
+    
+    ```bash
+    xb build --config=release
+    ```
+    
+    The build process:
+    1. Runs premake to generate `build/CMakeLists.txt`
+    2. Runs CMake to configure the build
+    3. Runs Ninja to compile the project
+  </Step>
+</Steps>
+
+## Build Process Details
+
+On Linux, `xb build` performs these steps:
+
+```bash
+# 1. CMake configuration
+cmake -Sbuild -Bbuild/build_debug \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -GNinja
+
+# 2. Ninja build
+ninja -Cbuild/build_debug
+```
+
+## Build Configurations
+
+<CodeGroup>
+
+```bash Debug
+# Debug build (default)
+xb build --config=debug
+```
+
+```bash Checked
+# Checked build (optimized with debug checks)
+xb build --config=checked
+```
+
+```bash Release
+# Release build (fully optimized)
+xb build --config=release
+```
+
+</CodeGroup>
+
+## Build Output Location
+
+Built binaries are located in:
+
+```
+build/bin/Linux/<Configuration>/
+```
+
+Where `<Configuration>` is:
+- `Debug/` - Debug builds
+- `Checked/` - Checked builds
+- `Release/` - Release builds
+
+## Running Xenia
+
+After building, you can run Xenia from the build output directory:
+
+```bash
+# Run with logging to console
+./build/bin/Linux/Debug/xenia-app --log_file=stdout /path/to/game.xex
+
+# Or set it as a default argument
+export XENIA_ARGS="--log_file=stdout"
+./build/bin/Linux/Debug/xenia-app /path/to/game.xex
+```
+
+<Tip>
+  To make life easier, set program startup arguments to something like:
+  
+  ```bash
+  --log_file=stdout /path/to/Default.xex
+  ```
+  
+  This will log to console and start the emulator right away.
+</Tip>
+
+## Updating Your Build
+
+```bash
+# Pull latest changes and update
+xb pull
+
+# Or manually
+git pull --rebase
+git submodule update --init --depth=1
+xb premake
+xb build
+```
+
+## IDE Support (Experimental)
+
+<Note>
+  IDE support on Linux is experimental and may require additional configuration.
+</Note>
+
+### CLion
+
+If CLion is available in your PATH:
+
+```bash
+xb devenv
+```
+
+This will:
+1. Generate CMake files
+2. Create a `.idea` workspace if it doesn't exist
+3. Launch CLion
+
+Or manually open `build/CMakeLists.txt` in CLion.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Clang 19 not found">
+    Ensure Clang 19 is installed and available:
+    
+    ```bash
+    # Check if clang-19 is installed
+    which clang-19
+    
+    # Set environment variables
+    export CC=clang-19
+    export CXX=clang++-19
+    
+    # Re-run setup
+    xb setup
+    ```
+    
+    On some distributions, you may need to add LLVM repositories for Clang 19.
+  </Accordion>
+
+  <Accordion title="Vulkan not found">
+    Install Vulkan development packages:
+    
+    ```bash
+    # Ubuntu/Debian
+    sudo apt-get install libvulkan-dev vulkan-tools
+    
+    # Verify installation
+    vulkaninfo
+    ```
+    
+    If you don't have a Vulkan-capable GPU, Xenia will not run properly.
+  </Accordion>
+
+  <Accordion title="Missing dependencies">
+    If you get errors about missing libraries, ensure all dependencies are installed:
+    
+    ```bash
+    # Ubuntu/Debian - full dependency list
+    sudo apt-get install build-essential mesa-vulkan-drivers valgrind \
+      libc++-dev libc++abi-dev libgtk-3-dev liblz4-dev libsdl2-dev \
+      libvulkan-dev libx11-xcb-dev clang-19 llvm-19 ninja-build
+    ```
+  </Accordion>
+
+  <Accordion title="Ninja build fails">
+    If Ninja fails during build:
+    
+    1. Clean the build directory:
+    ```bash
+    rm -rf build/build_*
+    ```
+    
+    2. Re-run premake and build:
+    ```bash
+    xb premake
+    xb build --force
+    ```
+  </Accordion>
+
+  <Accordion title="GCC vs Clang issues">
+    The build system is designed for Clang. While GCC might work, it's not officially supported.
+    
+    Always use Clang 19 or newer:
+    
+    ```bash
+    export CC=clang-19
+    export CXX=clang++-19
+    xb premake
+    xb build
+    ```
+  </Accordion>
+
+  <Accordion title="Python version too old">
+    Xenia requires Python 3.9+ (64-bit):
+    
+    ```bash
+    # Check Python version
+    python3 --version
+    
+    # On some systems you may need to install a newer version
+    sudo apt-get install python3.9  # or newer
+    
+    # Use specific version
+    python3.9 xenia-build.py build
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Known Limitations
+
+<Warning>
+  The Linux build is experimental. Known issues include:
+  
+  - Incomplete feature parity with Windows build
+  - Potential rendering issues
+  - Audio may not work correctly
+  - Performance may be suboptimal
+  - Some games may not work at all
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="xb Build Script" icon="terminal" href="/building/xb-script">
+    Learn about all available xb commands
+  </Card>
+  <Card title="Windows Build" icon="windows" href="/building/windows">
+    For a more stable build experience, consider Windows
+  </Card>
+</CardGroup>

@@ -1,0 +1,460 @@
+---
+title: "Kernel Architecture"
+description: "Xbox 360 kernel emulation and system calls in Xenia"
+---
+
+The Xenia kernel subsystem provides High-Level Emulation (HLE) of the Xbox 360 operating system. Rather than emulating the actual kernel code, Xenia implements kernel functions as native C++ code that provides equivalent functionality.
+
+## Xbox 360 Kernel
+
+The Xbox 360 runs a modified version of the Windows NT kernel:
+
+- **Base**: Windows NT kernel (similar to Windows Server 2003)
+- **Modifications**: Custom Xbox-specific functionality added
+- **Architecture**: Monolithic kernel with loadable modules
+- **Modules**: xboxkrnl.exe (kernel) and xam.xex (Xbox Application Manager)
+
+Games interact with the kernel through system calls and imported functions.
+
+## High-Level Emulation (HLE)
+
+Xenia uses HLE for kernel emulation:
+
+**Low-Level Emulation (LLE)**:
+- Emulates actual kernel machine code instruction-by-instruction
+- Accurate but extremely slow
+- Requires complete reverse engineering of kernel internals
+
+**High-Level Emulation (HLE)**:
+- Implements kernel APIs as native functions
+- Much faster than LLE
+- Focuses on API behavior rather than implementation
+- Requires understanding what each API does, not how it works
+
+Xenia implements HLE by replacing kernel function calls with native C++ implementations.
+
+## System Call Mechanism
+
+When a game calls a kernel function:
+
+### Module Loading and Import Resolution
+
+1. **Game XEX is loaded** - The executable format is parsed
+2. **Imports are found** - Loader identifies all kernel imports (functions the game needs)
+3. **Syscall insertion** - Loader places `sc` (syscall) instruction at import location
+4. **Export lookup** - Kernel export is found and linked to the import
+5. **JIT code generation** - JIT generates code to call Xenia's export implementation
+
+From `docs/kernel.md`.
+
+### Syscall Execution
+
+1. **Guest code executes `sc`** - System call instruction
+2. **JIT intercepts** - Recognizes syscall and generates host call
+3. **Context transition** - Switch from guest PowerPC context to host context
+4. **Export execution** - Native C++ kernel function runs
+5. **Return value** - Result placed in r3 register
+6. **Resume guest** - Return to translated PowerPC code
+
+See [CPU Architecture](/architecture/cpu) for details on guest/host transitions.
+
+## Kernel Export Functions
+
+Kernel exports can be defined in two ways:
+
+### Legacy SHIM_CALL Convention
+
+```cpp
+SHIM_CALL XAudioGetSpeakerConfig_shim(
+    PPCContext* ppc_context,
+    KernelState* kernel_state
+) {
+  // Manually extract parameters from PowerPC registers
+  uint32_t config_ptr = SHIM_GET_ARG_32(0);  // From r3
+  
+  // Implement functionality
+  uint32_t config = CalculateSpeakerConfig();
+  SHIM_MEM_32(config_ptr) = config;
+  
+  // Set return value
+  SHIM_SET_RETURN_32(X_ERROR_SUCCESS);
+}
+```
+
+From `src/xenia/kernel/xboxkrnl/xboxkrnl_audio.cc`.
+
+The SHIM_CALL convention:
+- Provides direct access to PowerPC context
+- Parameters are in r3-r10 (`SHIM_GET_ARG_32`)
+- Additional params on stack
+- Return value in r3 (`SHIM_SET_RETURN_32`)
+- Used in older code, being phased out
+
+### Modern Template Convention
+
+```cpp
+dword_result_t XAudioGetSpeakerConfig(
+    lpdword_t config_ptr
+) {
+  // Parameters automatically extracted
+  // config_ptr is already a typed pointer
+  
+  uint32_t config = CalculateSpeakerConfig();
+  *config_ptr = config;
+  
+  // Return value automatically placed in r3
+  return X_ERROR_SUCCESS;
+}
+```
+
+The modern convention:
+- Uses templates to automate parameter extraction
+- Type-safe parameter handling
+- Automatic return value setting
+- Cleaner, more maintainable code
+- Preferred for new implementations
+
+Parameter and return types like `dword_result_t` and `lpdword_t` are defined in `src/xenia/kernel/util/shim_utils.h`.
+
+## Kernel Modules
+
+Xenia emulates two kernel modules:
+
+### xboxkrnl.exe - Xbox Kernel
+
+Location: `src/xenia/kernel/xboxkrnl/`
+
+A modified NT kernel with Xbox-specific functionality:
+
+**API Categories** (from `docs/kernel.md`):
+- **Memory**: `NtAllocateVirtualMemory`, `MmAllocatePhysicalMemoryEx`
+- **Threading**: `ExCreateThread`, `KeSetAffinityThread`, `NtWaitForSingleObject`
+- **Synchronization**: `NtCreateEvent`, `NtCreateMutex`, `NtCreateSemaphore`
+- **I/O**: `NtCreateFile`, `NtReadFile`, `NtWriteFile`
+- **Modules**: `XexLoadImage`, `XexGetProcedureAddress`
+- **Debugging**: `DbgPrint`, `KeBugCheck`
+- **Audio**: Low-level XAudio APIs
+- **Video**: Display and video output APIs
+
+Most APIs are similar to Win32 equivalents and documented on MSDN.
+
+**Organization**: Source files are grouped by functionality:
+- `xboxkrnl_memory.cc` - Memory management
+- `xboxkrnl_threading.cc` - Thread and process management
+- `xboxkrnl_io.cc` - File I/O and devices
+- `xboxkrnl_rtl.cc` - Runtime library functions
+- And more...
+
+### xam.xex - Xbox Application Manager
+
+Location: `src/xenia/kernel/xam/`
+
+Xbox-specific functionality not in standard NT kernel:
+
+**API Categories**:
+- **User Management**: Profiles, avatars, friends
+- **Achievements**: Achievement unlocking and tracking
+- **Content**: DLC, save games, marketplace
+- **UI**: Dashboards, dialogs, keyboard input
+- **Networking**: Xbox Live services
+- **Matchmaking**: Multiplayer session management
+- **Storage**: Save device management
+
+**Key Components**:
+
+```cpp
+class XamState {
+  AppManager* app_manager_;              // Application lifecycle
+  ContentManager* content_manager_;      // DLC and save data
+  AchievementManager* achievement_manager_; // Achievements
+  // ...
+};
+```
+
+From `src/xenia/kernel/xam/xam_state.h`.
+
+XAM handles the Xbox-specific user experience that makes Xbox 360 distinct from Windows.
+
+## Kernel State
+
+The `KernelState` class (`src/xenia/kernel/kernel_state.h`) is the core of kernel emulation:
+
+```cpp
+class KernelState {
+  // Core subsystems
+  Processor* processor_;               // CPU emulator
+  Memory* memory_;                     // Memory manager  
+  VirtualFileSystem* file_system_;     // VFS for game files
+  XamState* xam_state_;                // XAM subsystem
+  
+  // Kernel objects
+  ObjectTable* object_table_;          // Handle table
+  std::vector<XThread*> threads_;      // All threads
+  
+  // Kernel globals
+  KernelGuestGlobals* kernel_guest_globals_; // Guest-side structures
+  
+  // Processes
+  X_KPROCESS idle_process_;            // Idle process
+  X_KPROCESS title_process_;           // Game process
+  X_KPROCESS system_process_;          // System process
+  
+  // ...
+};
+```
+
+From `src/xenia/kernel/kernel_state.h:150+`.
+
+### Kernel Guest Globals
+
+The kernel maintains guest-visible global data (`src/xenia/kernel/kernel_state.h:114`):
+
+```cpp
+struct KernelGuestGlobals {
+  // Object types
+  X_OBJECT_TYPE ExThreadObjectType;
+  X_OBJECT_TYPE ExEventObjectType;
+  X_OBJECT_TYPE ExMutantObjectType;
+  // ... more object types
+  
+  // Processes
+  X_KPROCESS idle_process;     // X_PROCTYPE_IDLE
+  X_KPROCESS title_process;    // X_PROCTYPE_TITLE (game)
+  X_KPROCESS system_process;   // X_PROCTYPE_SYSTEM
+  
+  // Locks
+  X_KSPINLOCK dispatcher_lock; // Synchronization primitive lock
+  X_KSPINLOCK ob_lock;         // Object manager lock
+  
+  // Events
+  X_KEVENT UsbdBootEnumerationDoneEvent;
+};
+```
+
+These structures are placed in guest memory so games can access them directly.
+
+## Object Management
+
+The kernel manages objects (threads, events, files, etc.) through handles:
+
+### Object Types
+
+All kernel objects derive from `XObject` (`src/xenia/kernel/xobject.h`):
+
+```cpp
+class XObject {
+  X_HANDLE handle_;      // Kernel handle
+  uint32_t ref_count_;   // Reference counting
+  // ...
+};
+```
+
+**Common Object Types**:
+- `XThread` - Thread of execution
+- `XEvent` - Event object (signaled/unsignaled)
+- `XMutant` - Mutex (called "mutant" in NT kernel)
+- `XSemaphore` - Semaphore
+- `XTimer` - Timer object
+- `XFile` - File handle
+- `XModule` - Loaded executable module
+
+### Object Table
+
+Handles are managed by the object table (`src/xenia/kernel/util/object_table.h`):
+
+```cpp
+class ObjectTable {
+  std::unordered_map<X_HANDLE, object_ref<XObject>> objects_;
+  X_HANDLE next_handle_;
+  
+  X_HANDLE AddObject(XObject* object);
+  XObject* LookupObject(X_HANDLE handle);
+  void RemoveObject(X_HANDLE handle);
+};
+```
+
+Games receive opaque handles and use them in kernel calls:
+
+```cpp
+// Create event
+X_HANDLE handle = NtCreateEvent(...);
+
+// Wait on event  
+NtWaitForSingleObject(handle, ...);
+
+// Close handle
+NtClose(handle);
+```
+
+## Threading Model
+
+The Xbox 360 has 6 hardware threads (3 cores × 2 threads/core).
+
+### Thread Creation
+
+Games create threads with `ExCreateThread` or `NtCreateThread`:
+
+```cpp
+X_HANDLE ExCreateThread(
+    lpdword_t handle_ptr,
+    dword_t stack_size,
+    lpdword_t thread_id_ptr,
+    dword_t creation_flags,
+    lpvoid_t start_address,
+    lpvoid_t start_context,
+    dword_t creation_params
+);
+```
+
+Xenia creates a host OS thread for each guest thread:
+
+1. Allocate `XThread` object
+2. Create host thread (pthread or Windows thread)
+3. Set up guest stack and context
+4. Add to thread list in process
+5. Return handle to caller
+
+### Thread Scheduling
+
+The host OS schedules threads:
+- No emulation of Xbox 360 scheduler
+- Relies on host to balance threads across cores
+- Thread affinity can be set to pin to specific cores
+- Priority levels are mapped to host priority levels
+
+### Thread Synchronization
+
+Synchronization primitives are implemented in kernel:
+
+**Events** (`XEvent`):
+- Manual or auto-reset
+- Signaled/unsignaled state
+- Wait functions block until signaled
+
+**Mutexes** (`XMutant`):
+- Recursive locking support
+- Ownership tracking
+- Priority inheritance
+
+**Semaphores** (`XSemaphore`):
+- Count-based synchronization
+- Maximum count limit
+
+**Critical Sections**:
+- Lightweight spinlocks for short critical regions
+- Implemented as tight loops checking atomic flags
+
+## Process Model
+
+The kernel maintains three processes (from `src/xenia/kernel/kernel_state.h:128`):
+
+### Idle Process (X_PROCTYPE_IDLE)
+
+- Runs in interrupt contexts
+- Initial kernel startup context
+- Minimal functionality
+
+### Title Process (X_PROCTYPE_TITLE)  
+
+- The game itself
+- Most game threads run in this process
+- Has access to full system resources
+
+### System Process (X_PROCTYPE_SYSTEM)
+
+- System background tasks
+- Threads can be created with special flags
+- Purpose not fully understood
+
+Each process has its own thread list and quantum (time slice).
+
+## File System
+
+The kernel provides file I/O through the Virtual File System (VFS):
+
+### Device Mounting
+
+Games access files through drive letters and symbolic links:
+
+```
+GAME: -> Mounted disc image or folder
+D:    -> Game partition
+E:    -> Cache partition
+HDD:  -> Hard drive
+```
+
+The VFS maps these to host paths or archive files (ISO, STFS containers).
+
+### File Operations
+
+```cpp
+X_HANDLE NtCreateFile(
+    lpdword_t handle_out,
+    dword_t desired_access,
+    pointer_t<X_OBJECT_ATTRIBUTES> obj_attributes,
+    // ... more params
+);
+
+X_STATUS NtReadFile(
+    dword_t handle,
+    lpvoid_t buffer,
+    dword_t length,
+    // ... more params
+);
+```
+
+Implemented in `src/xenia/kernel/xboxkrnl/xboxkrnl_io.cc`.
+
+## Debugging Support
+
+The kernel provides debugging facilities:
+
+### Debug Print
+
+```cpp
+void DbgPrint(
+    const char* format,
+    ... // varargs
+);
+```
+
+Games use this to log debug messages. Output appears in Xenia's log.
+
+### Assertions
+
+```cpp
+void KeBugCheck(dword_t code);
+void KeBugCheckEx(dword_t code, ...);
+```
+
+Triggered when games detect fatal errors. Xenia can break to debugger.
+
+## Performance and Limitations
+
+### HLE Benefits
+
+- Much faster than emulating kernel code
+- Easier to implement and maintain
+- Can use host OS facilities directly
+- Focuses effort on game compatibility
+
+### HLE Challenges
+
+- Requires reverse engineering each API
+- Behavior must match original exactly
+- Edge cases and undocumented behavior are difficult
+- Some games may depend on kernel internals
+
+### Incomplete APIs
+
+Not all kernel functions are implemented:
+- Some are stubs that log warnings
+- Rarely-used APIs may not be needed
+- Implementation is driven by game requirements
+
+## References
+
+- Kernel export implementations in `src/xenia/kernel/xboxkrnl/`
+- XAM implementations in `src/xenia/kernel/xam/`
+- Object management in `src/xenia/kernel/util/object_table.h`
+- Kernel state in `src/xenia/kernel/kernel_state.h`

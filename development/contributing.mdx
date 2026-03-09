@@ -1,0 +1,178 @@
+---
+title: Contributing to Xenia
+description: Guidelines for contributing code and improvements to the Xenia Xbox 360 emulator
+---
+
+We welcome contributions from developers who want to help improve Xenia! Whether you're fixing bugs, optimizing performance, or adding new features, your contributions are valuable.
+
+## Areas That Need Help
+
+Have some spare time, know advanced C++, and want to write an emulator? There's a ton of work that needs to be done:
+
+- **Game Compatibility**: Help work through [missing functionality and bugs in games](https://github.com/xenia-canary/xenia-canary/labels/compat)
+- **Performance**: Reduce the size of Xenia's [huge log files](https://github.com/xenia-canary/xenia-canary/issues/1526)
+- **Linux Support**: A strong contributor is needed to [help with porting](https://github.com/xenia-canary/xenia-canary/labels/platform-linux)
+- **Good First Issues**: See projects [good for contributors](https://github.com/xenia-canary/xenia-canary/labels/good%20first%20issue)
+
+<Tip>
+It's a good idea to ask on [Discord](https://discord.gg/Q9mxZf9) in the `#dev` channel and check the issues page before beginning work on something.
+</Tip>
+
+## Before You Start
+
+### Read the Style Guide
+
+Please read the [style guide](/development/style-guide) before sending pull requests. The buildbot will check your code formatting, so it's important to follow the guidelines from the start.
+
+**Quick rule**: Run `xb format` before you add a commit and you won't have problems.
+
+### Information Sourcing Rules
+
+All information in Xenia has been derived from:
+- Reverse engineering legally-owned games and hardware
+- Tools made public by Microsoft (such as XNA Game Studio)
+- Public documentation from Microsoft (slide decks, conference presentations)
+- Code made public by 3rd party companies (like Valve SDKs)
+
+<Warning>
+**The official Microsoft Xbox Development Kits (XDKs) are strictly forbidden.** We do not want XDKs, nor any information derived from them. Posting any information directly from an XDK will result in a project ban.
+</Warning>
+
+## Contributing Code
+
+### Referencing Sources
+
+When writing code that interacts with guest interfaces or protocols, please leave comments describing how the information was obtained.
+
+For code based on analysis of Xbox 360 hardware or software, provide:
+- Reproduction information
+- Algorithm outlines
+- Function call arguments and results
+- GPU or XMA commands and state register changes
+
+This helps with:
+- Verifying the legality of submitted code
+- Enabling additional research based on your findings
+- Evaluating accuracy and completeness
+
+<Note>
+If you verified your code using a game, **do not** refer to it by its title trademark. Instead, use the hexadecimal title ID number displayed in the title bar. Avoid using proper names of game content.
+</Note>
+
+#### TODO Comments
+
+If you're unsure about code accuracy or want more research done, use TODO comments in this format:
+
+```cpp
+// TODO(yourgithubname): Verify behavior with additional test cases.
+```
+
+### No Game-Specific Code
+
+<Warning>
+Do not put conditionals based on hard-coded game identifiers. Xenia's goal is researching the Xbox 360 console itself, not creating game-specific workarounds. Game-specific hacks provide no help and complicate research.
+</Warning>
+
+- Do not leave hard-coded references to specific games in the UI or configuration
+- Game identifiers in the UI must only come from user-provided data
+- Any workarounds must be expressed in terms of the common interface
+
+### Clean Git History
+
+Tools like `git bisect` are used regularly to identify regressions, requiring a clean git history.
+
+**Requirements:**
+- Individual commits must add functionality in a working form
+- Each commit must fully compile and run on its own
+- Small pull requests with a single commit are best
+- Multiple commits are allowed only if kept clean
+
+<Warning>
+If your commit history is messy, you will be asked to rebase your pull request.
+</Warning>
+
+#### Bad Commit History Example
+
+```
+✗ Adding audio callback, random file loading, networking, etc. (+2000 lines)
+✗ Whoops.
+✗ Fixing build break.
+✗ Fixing lint errors.
+✗ Adding audio callback, second attempt.
+```
+
+Histories like this make it difficult to check out individual commits in a good state. Use rebasing, cherry-picking, or split commits into separate branches.
+
+#### Good Commit History Example
+
+```
+✓ Add audio callback interface
+✓ Implement file loading for audio resources
+✓ Add network audio streaming support
+```
+
+### GitHub Workflow
+
+1. **Fork the repository** on GitHub
+2. **Clone your fork** locally
+3. **Create a branch** for your feature or fix
+4. **Make your changes** following the style guide
+5. **Run `xb format`** before committing
+6. **Test your changes** thoroughly
+7. **Commit with clear messages** describing the changes
+8. **Push to your fork** and create a pull request
+9. **Respond to feedback** from maintainers
+
+<Tip>
+Keep your pull requests focused on a single issue or feature. Smaller PRs are easier to review and merge.
+</Tip>
+
+## Testing Your Changes
+
+Before submitting a pull request:
+
+1. Build the project with `xb build`
+2. Test with actual Xbox 360 game files
+3. Check for regressions in previously working games
+4. Verify all commits compile and run individually
+5. Run `xb format` to ensure code style compliance
+
+## Issue Tracker Guidelines
+
+The issue tracker is exclusively for:
+- Filing and discussing bugs
+- Feature requests
+- Tracking work items
+
+**Not for:**
+- Technical support (use Discord instead)
+- General discussion
+- Discussing illegal activity
+
+<Warning>
+Repeated misuses of the issue tracker will result in a permanent project ban.
+</Warning>
+
+## License
+
+All Xenia code is licensed under the 3-clause BSD license. Code under `third_party/` is licensed under its original license.
+
+**Key points:**
+- Incoming pull requests are subject to the Xenia license
+- Copyright is ascribed to the project to prevent future disputes
+- Xenia will never be sold or made closed source
+- The license will never change to a fundamentally incompatible one
+
+### Third-Party Code
+
+Any `third_party/` code added will be reviewed for license conformance:
+- GPL code is forbidden (except for development-time tooling like compiling)
+- LGPL code is strongly discouraged as it complicates building
+
+## Community
+
+Join us on [Discord](https://discord.gg/Q9mxZf9) to chat about emulator-related topics. For developer discussions, join the `#dev` channel but stay on topic.
+
+<Note>
+We have jobs and lives, so don't expect instant answers. Lurking is not only fine, but encouraged! Check the [FAQ](https://github.com/xenia-canary/xenia-canary/wiki/FAQ) before asking questions.
+</Note>

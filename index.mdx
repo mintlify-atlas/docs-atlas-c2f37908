@@ -1,97 +1,148 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Xenia - Xbox 360 Emulator
+description: Experimental Xbox 360 emulator with PowerPC-to-x64 JIT translation and Xenos GPU emulation
 ---
 
-## Setting up
+<div style={{
+  background: 'linear-gradient(135deg, #5ca2f2 0%, #5c7ca4 100%)',
+  borderRadius: '8px',
+  padding: '48px 32px',
+  marginBottom: '48px',
+  color: '#ffffff'
+}}>
+  <h1 style={{
+    fontSize: '48px',
+    fontWeight: '700',
+    marginBottom: '16px',
+    color: '#ffffff'
+  }}>
+    Xenia Xbox 360 Emulator
+  </h1>
+  <p style={{
+    fontSize: '20px',
+    marginBottom: '32px',
+    color: '#f0f0f0'
+  }}>
+    Research project for emulating Xbox 360 games on modern hardware with advanced JIT compilation and GPU emulation
+  </p>
+  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+    <a
+      href="/quickstart"
+      style={{
+        background: '#ffffff',
+        color: '#5ca2f2',
+        padding: '12px 24px',
+        borderRadius: '4px',
+        textDecoration: 'none',
+        fontWeight: '600',
+        display: 'inline-block'
+      }}
+    >
+      Get Started
+    </a>
+    <a
+      href="https://github.com/emoose/xenia"
+      target="_blank"
+      style={{
+        background: 'rgba(255, 255, 255, 0.2)',
+        color: '#ffffff',
+        padding: '12px 24px',
+        borderRadius: '4px',
+        textDecoration: 'none',
+        fontWeight: '600',
+        display: 'inline-block',
+        border: '2px solid rgba(255, 255, 255, 0.3)'
+      }}
+    >
+      View on GitHub
+    </a>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## About Xenia
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Xenia is an experimental emulator for the Xbox 360 console. This project is focused on research and education around emulation of modern gaming systems. It translates PowerPC code to x64 using a sophisticated JIT compiler and emulates the custom Xenos GPU using Vulkan.
 
-## Make it yours
+<Note>
+This is a non-maintained fork with mousehook/STFS and other experimental features. For a more actively maintained version, check [xenia-canary](https://github.com/xenia-canary/xenia-canary) or the [mousehook fork](https://github.com/marinesciencedude/xenia-canary-mousehook).
+</Note>
 
-Design a docs site that looks great and empowers your users.
+## Key Features
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="PowerPC JIT Compiler" icon="microchip">
+    Translates Xbox 360 PowerPC instructions to x64 using a multi-stage HIR intermediate representation
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Xenos GPU Emulation" icon="display">
+    Emulates the custom AMD Xenos graphics chip with modern Vulkan backend support
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Kernel Emulation" icon="gear">
+    Full Xbox 360 kernel and system call emulation for authentic game execution
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Advanced Debugging Tools" icon="bug">
+    GPU trace viewer, shader playground, and comprehensive debugging capabilities
   </Card>
-</Columns>
+  <Card title="Memory Management" icon="memory">
+    Accurate virtual and physical memory mapping matching Xbox 360 architecture
+  </Card>
+  <Card title="STFS Support" icon="folder-open">
+    Secure Transient File System support for Xbox 360 game packages and saves
+  </Card>
+</CardGroup>
 
-## Create beautiful pages
+## Quick Links
 
-Everything you need to create world-class documentation.
+<CardGroup cols={3}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Get Xenia running in minutes
+  </Card>
+  <Card title="Building from Source" icon="hammer" href="/building/setup">
+    Build and develop Xenia
+  </Card>
+  <Card title="Architecture Overview" icon="sitemap" href="/architecture/overview">
+    Learn how Xenia works
+  </Card>
+  <Card title="GPU Tools" icon="palette" href="/gpu/trace-viewer">
+    Debug graphics issues
+  </Card>
+  <Card title="Contributing" icon="code-branch" href="/development/contributing">
+    Join the development
+  </Card>
+  <Card title="FAQ" icon="circle-question" href="/reference/faq">
+    Common questions answered
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Platform Support
 
-## Need inspiration?
+Xenia primarily targets Windows with full Visual Studio support. Linux support is experimental and uses Clang 19+ with Vulkan drivers.
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+### Requirements
+
+- **Windows**: Windows 10/11, Visual Studio 2022, Python 3.9+
+- **Linux**: Ubuntu/Debian with Clang 19+, Vulkan drivers, libc++
+- **Hardware**: 64-bit processor, Vulkan-capable GPU
+
+## Community & Disclaimer
+
+<Warning>
+The goal of this project is to experiment, research, and educate on emulation of modern devices and operating systems. **It is not for enabling illegal activity**. All information is obtained via reverse engineering of legally purchased devices and games.
+</Warning>
+
+Join the community on [Discord](https://discord.gg/Q9mxZf9) for emulator-related discussions. Check the [game compatibility list](https://github.com/xenia-canary/game-compatibility/issues) to see which games are playable.
+
+## Getting Started
+
+<Steps>
+  <Step title="Download or Build">
+    Download a pre-built release or [build from source](/building/setup) using the `xb` build script
+  </Step>
+  <Step title="Configure">
+    Set up your [configuration](/reference/configuration) and command-line options
+  </Step>
+  <Step title="Run Games">
+    Launch `.xex` or `.iso` files directly with Xenia
+  </Step>
+</Steps>
+
+Ready to dive in? Start with the [quickstart guide](/quickstart) or explore the [architecture documentation](/architecture/overview).

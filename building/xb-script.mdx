@@ -1,0 +1,712 @@
+---
+title: 'xb Build Script'
+description: 'Complete reference for the xenia-build.py (xb) build script commands'
+---
+
+## Overview
+
+The `xb` (xenia-build) script is a Python-based build tool that orchestrates the entire Xenia build process. It wraps premake5, git operations, and platform-specific build tools.
+
+<Tip>
+  The `xb` command is a wrapper for `xenia-build.py`. You can use either:
+  - `xb <command>` (if xb is in your PATH)
+  - `python xenia-build.py <command>`
+</Tip>
+
+## Requirements
+
+- Python 3.9+ (64-bit)
+- Git
+- Platform-specific build tools (Visual Studio, Clang, etc.)
+
+## Core Commands
+
+### setup
+
+Initializes the build environment by setting up git submodules and running premake.
+
+```bash
+xb setup [--target_os=OS]
+```
+
+<ParamField path="--target_os" type="string" optional>
+  Target OS for cross-compilation (e.g., `android`)
+</ParamField>
+
+**What it does:**
+1. Initializes and updates git submodules
+2. Runs premake to generate platform-specific project files
+3. Generates `build/version.h` with git version information
+
+<CodeGroup>
+
+```bash Standard Setup
+xb setup
+```
+
+```bash Android Cross-Compile
+xb setup --target_os=android
+```
+
+</CodeGroup>
+
+### build
+
+Builds the project using the platform's native build tools.
+
+```bash
+xb build [OPTIONS]
+```
+
+<ParamField path="--config" type="string" default="debug">
+  Build configuration: `debug`, `checked`, or `release`
+</ParamField>
+
+<ParamField path="--target" type="string" optional>
+  Specific target(s) to build. Can be specified multiple times.
+</ParamField>
+
+<ParamField path="--force" type="boolean" optional>
+  Forces a full rebuild (clean + build)
+</ParamField>
+
+<ParamField path="--no_premake" type="boolean" optional>
+  Skips running premake before building
+</ParamField>
+
+<ParamField path="--cc" type="string" optional>
+  Compiler toolchain: `clang`, `gcc`, or `msc`
+</ParamField>
+
+<CodeGroup>
+
+```bash Debug Build
+# Build everything in debug mode (default)
+xb build
+```
+
+```bash Release Build
+# Build in release mode
+xb build --config=release
+```
+
+```bash Specific Targets
+# Build only xenia-app and xenia-vfs-dump
+xb build --target=xenia-app --target=xenia-vfs-dump
+```
+
+```bash Force Rebuild
+# Clean and rebuild everything
+xb build --force
+```
+
+```bash Custom Compiler
+# Build with specific compiler
+xb build --cc=clang --config=release
+```
+
+</CodeGroup>
+
+### premake
+
+Runs premake to update project files without building.
+
+```bash
+xb premake [OPTIONS]
+```
+
+<ParamField path="--cc" type="string" optional>
+  Compiler toolchain: `clang`, `gcc`, or `msc`
+</ParamField>
+
+<ParamField path="--devenv" type="string" optional>
+  Development environment: `vs2022`, `xcode4`, `cmake`, etc.
+</ParamField>
+
+<ParamField path="--target_os" type="string" optional>
+  Target OS for cross-compilation
+</ParamField>
+
+```bash
+# Update project files
+xb premake
+
+# Generate for specific IDE
+xb premake --devenv=vs2022
+
+# Generate with specific compiler
+xb premake --cc=clang
+```
+
+### devenv
+
+Runs premake and opens the development environment (IDE).
+
+```bash
+xb devenv
+```
+
+**Platform behavior:**
+- **Windows**: Opens Visual Studio with `build/xenia.sln`
+- **macOS**: Opens Xcode
+- **Linux**: Opens CLion (if available), otherwise CodeLite
+
+```bash
+# Open IDE with latest project files
+xb devenv
+```
+
+### pull
+
+Pulls the latest changes from the repository, updates submodules, and runs premake.
+
+```bash
+xb pull [OPTIONS]
+```
+
+<ParamField path="--merge" type="boolean" optional>
+  Merges instead of rebasing on canary_experimental branch
+</ParamField>
+
+<ParamField path="--target_os" type="string" optional>
+  Target OS for premake
+</ParamField>
+
+**What it does:**
+1. Switches to `canary_experimental` branch
+2. Pulls latest changes (with rebase by default)
+3. Updates git submodules
+4. Runs premake to update project files
+
+<CodeGroup>
+
+```bash Pull with Rebase
+# Default: rebase changes
+xb pull
+```
+
+```bash Pull with Merge
+# Merge instead of rebase
+xb pull --merge
+```
+
+</CodeGroup>
+
+## Code Quality Commands
+
+### format
+
+Formats staged code using clang-format 19.
+
+```bash
+xb format [OPTIONS]
+```
+
+<ParamField path="--all" type="boolean" optional>
+  Format all files, not just changed files
+</ParamField>
+
+<ParamField path="--origin" type="boolean" optional>
+  Format all files changed relative to origin/canary_experimental
+</ParamField>
+
+<CodeGroup>
+
+```bash Format Staged Changes
+# Format only staged changes
+git add <files>
+xb format
+```
+
+```bash Format All Files
+# Format entire codebase (use with caution)
+xb format --all
+```
+
+```bash Format Changed Files
+# Format files changed from origin branch
+xb format --origin
+```
+
+</CodeGroup>
+
+<Note>
+  clang-format version 19 is required. The script will automatically detect the correct version.
+</Note>
+
+### lint
+
+Checks for lint errors using clang-format without modifying files.
+
+```bash
+xb lint [OPTIONS]
+```
+
+<ParamField path="--all" type="boolean" optional>
+  Lint all files, not just changed files
+</ParamField>
+
+<ParamField path="--origin" type="boolean" optional>
+  Lint files changed relative to origin/canary_experimental
+</ParamField>
+
+```bash
+# Check staged changes for formatting issues
+xb lint
+
+# Check all files
+xb lint --all
+
+# Check files changed from origin
+xb lint --origin
+```
+
+### style
+
+Runs cpplint style checker on all code.
+
+```bash
+xb style
+```
+
+Checks for style violations using cpplint against the Xenia style guide.
+
+### tidy
+
+Runs clang-tidy static analyzer on all code.
+
+```bash
+xb tidy [OPTIONS]
+```
+
+<ParamField path="--fix" type="boolean" optional>
+  Applies suggested fixes where possible
+</ParamField>
+
+<ParamField path="--target_os" type="string" optional>
+  Target OS for compilation database
+</ParamField>
+
+```bash
+# Check for issues
+xb tidy
+
+# Fix issues automatically
+xb tidy --fix
+```
+
+## Maintenance Commands
+
+### clean
+
+Removes intermediate files and build outputs.
+
+```bash
+xb clean [--target_os=OS]
+```
+
+Runs `premake clean` to remove build artifacts while preserving the build directory structure.
+
+### nuke
+
+Removes all build output and performs a hard git reset.
+
+```bash
+xb nuke [--target_os=OS]
+```
+
+<Warning>
+  This is a destructive operation. It will:
+  1. Delete the entire `build/` directory
+  2. Perform a hard git reset to `canary_experimental`
+  3. Run premake to regenerate project files
+  
+  **Any uncommitted changes will be lost!**
+</Warning>
+
+```bash
+# Nuclear option: start fresh
+xb nuke
+```
+
+## Testing Commands
+
+### test
+
+Runs automated unit tests.
+
+```bash
+xb test [OPTIONS] [-- TEST_ARGS]
+```
+
+<ParamField path="--config" type="string" default="debug">
+  Build configuration to test
+</ParamField>
+
+<ParamField path="--target" type="string" optional>
+  Specific test target(s) to run
+</ParamField>
+
+<ParamField path="--no_build" type="boolean" optional>
+  Don't build before running tests
+</ParamField>
+
+<ParamField path="--continue" type="boolean" optional>
+  Don't stop when a test fails; run all tests
+</ParamField>
+
+**Default test targets:**
+- `xenia-base-tests`
+- `xenia-cpu-ppc-tests`
+
+<CodeGroup>
+
+```bash Run All Tests
+# Build and run all tests
+xb test
+```
+
+```bash Run Specific Tests
+# Run tests matching pattern
+xb test -- instr_foo
+```
+
+```bash Skip Build
+# Run tests without building
+xb test --no_build
+```
+
+```bash Continue on Failure
+# Run all tests even if some fail
+xb test --continue
+```
+
+</CodeGroup>
+
+### gputest
+
+Runs automated GPU diff tests against reference imagery.
+
+```bash
+xb gputest [OPTIONS]
+```
+
+<ParamField path="--config" type="string" default="debug">
+  Build configuration to test
+</ParamField>
+
+<ParamField path="--no_build" type="boolean" optional>
+  Don't build before running tests
+</ParamField>
+
+<ParamField path="--update_reference_files" type="boolean" optional>
+  Update all reference imagery
+</ParamField>
+
+<ParamField path="--generate_missing_reference_files" type="boolean" optional>
+  Create reference files for new traces
+</ParamField>
+
+```bash
+# Run GPU tests
+xb gputest
+
+# Generate missing reference files
+xb gputest --generate_missing_reference_files
+
+# Update reference imagery
+xb gputest --update_reference_files
+```
+
+### gentests
+
+Generates test binaries from PowerPC assembly files.
+
+```bash
+xb gentests
+```
+
+**What it does:**
+1. Finds all `.s` assembly files starting with `instr_` or `seq_` in `src/`
+2. Assembles them using PowerPC binutils
+3. Generates test binaries in `src/xenia/cpu/ppc/testing/bin/`
+
+Required for CPU test development. Run after modifying `.s` test files.
+
+## Advanced Commands
+
+### buildshaders
+
+Generates shader binaries for inclusion in C++ files.
+
+```bash
+xb buildshaders [OPTIONS]
+```
+
+<ParamField path="--target" type="string" optional>
+  Shader target: `dxbc` (Direct3D) or `spirv` (Vulkan). Can specify multiple.
+</ParamField>
+
+**Shader targets:**
+- `dxbc` - Direct3D 12 Shader Model 5.1 (Windows only)
+- `spirv` - Vulkan SPIR-V (all platforms)
+
+<CodeGroup>
+
+```bash Build All Shaders
+# Build both DXBC and SPIR-V
+xb buildshaders
+```
+
+```bash Build SPIR-V Only
+# Linux/macOS: build only Vulkan shaders
+xb buildshaders --target=spirv
+```
+
+```bash Build DXBC Only
+# Windows: build only Direct3D shaders
+xb buildshaders --target=dxbc
+```
+
+</CodeGroup>
+
+<Note>
+  **Requirements:**
+  - DXBC: Windows with FXC (from Windows SDK)
+  - SPIR-V: `VULKAN_SDK` environment variable set, with glslangValidator and spirv-opt
+</Note>
+
+### stub
+
+Creates new source files with copyright headers.
+
+```bash
+xb stub [OPTIONS]
+```
+
+<ParamField path="--file" type="string" optional>
+  Generate a single source file at the specified path
+</ParamField>
+
+<ParamField path="--class" type="string" optional>
+  Generate a class pair (.cc and .h) at the specified path
+</ParamField>
+
+<ParamField path="--target_os" type="string" optional>
+  Target OS for premake
+</ParamField>
+
+<CodeGroup>
+
+```bash Create Single File
+# Create a new .cc file with copyright header
+xb stub --file=base/my_utility.cc
+```
+
+```bash Create Class Pair
+# Create .cc and .h files for a class
+xb stub --class=base/my_class
+```
+
+</CodeGroup>
+
+All paths are relative to `src/xenia/`. The command will:
+1. Generate files with copyright headers
+2. Run premake to update project files
+
+## Common Workflows
+
+### First-Time Setup
+
+<Steps>
+  <Step title="Clone repository">
+    ```bash
+    git clone https://github.com/xenia-canary/xenia-canary.git
+    cd xenia-canary
+    ```
+  </Step>
+  
+  <Step title="Initial setup">
+    ```bash
+    xb setup
+    ```
+  </Step>
+  
+  <Step title="Build">
+    ```bash
+    xb build --config=release
+    ```
+  </Step>
+</Steps>
+
+### Daily Development
+
+<Steps>
+  <Step title="Pull latest changes">
+    ```bash
+    xb pull
+    ```
+  </Step>
+  
+  <Step title="Make changes and build">
+    ```bash
+    # Make your code changes...
+    xb build
+    ```
+  </Step>
+  
+  <Step title="Format code">
+    ```bash
+    git add <changed-files>
+    xb format
+    ```
+  </Step>
+  
+  <Step title="Run tests">
+    ```bash
+    xb test
+    ```
+  </Step>
+</Steps>
+
+### Before Committing
+
+```bash
+# Stage your changes
+git add <files>
+
+# Format code
+xb format
+
+# Check for lint errors
+xb lint
+
+# Run tests
+xb test
+
+# Commit
+git commit -m "Your message"
+```
+
+### Clean Build
+
+```bash
+# Option 1: Clean and rebuild
+xb clean
+xb build --force
+
+# Option 2: Nuclear option (removes everything)
+xb nuke
+xb build
+```
+
+## Passing Arguments to Build Tools
+
+You can pass additional arguments to the underlying build tools using `--`:
+
+```bash
+# Pass arguments to MSBuild (Windows)
+xb build -- /maxcpucount:4
+
+# Pass arguments to CMake (Linux)
+xb build -- -DCMAKE_VERBOSE_MAKEFILE=ON
+
+# Pass arguments to tests
+xb test -- instr_foo --verbose
+```
+
+## Environment Variables
+
+### Linux/macOS
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CC` | `clang` | C compiler |
+| `CXX` | `clang++` | C++ compiler |
+| `VULKAN_SDK` | - | Path to Vulkan SDK (required for shader builds) |
+
+### Windows
+
+| Variable | Description |
+|----------|-------------|
+| `VSVERSION` | Visual Studio version (auto-detected) |
+| `VULKAN_SDK` | Path to Vulkan SDK (required for shader builds) |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: xb">
+    Use the full Python command:
+    
+    ```bash
+    python xenia-build.py <command>
+    ```
+    
+    Or add the xenia-canary directory to your PATH.
+  </Accordion>
+
+  <Accordion title="Python version error">
+    Ensure you have Python 3.9+ 64-bit:
+    
+    ```bash
+    python --version
+    python -c "import sys; print('64-bit' if sys.maxsize > 2**32 else '32-bit')"
+    ```
+  </Accordion>
+
+  <Accordion title="Visual Studio not found (Windows)">
+    Install Visual Studio 2022 with C++ development tools. The script uses `vswhere.exe` to locate it.
+  </Accordion>
+
+  <Accordion title="Clang not found (Linux)">
+    Install Clang 19 and set environment variables:
+    
+    ```bash
+    sudo apt-get install clang-19
+    export CC=clang-19
+    export CXX=clang++-19
+    ```
+  </Accordion>
+
+  <Accordion title="clang-format version mismatch">
+    Install clang-format 19:
+    
+    **Ubuntu/Debian:**
+    ```bash
+    sudo apt-get install clang-format-19
+    ```
+    
+    **Windows:**
+    Install via Visual Studio or download LLVM 19.
+  </Accordion>
+</AccordionGroup>
+
+## Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `xb setup` | Initialize build environment |
+| `xb build` | Build the project |
+| `xb build --config=release` | Build release version |
+| `xb devenv` | Open IDE |
+| `xb pull` | Update from repository |
+| `xb premake` | Regenerate project files |
+| `xb format` | Format staged code |
+| `xb lint` | Check code formatting |
+| `xb test` | Run tests |
+| `xb clean` | Remove build artifacts |
+| `xb nuke` | Nuclear reset (destructive) |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Windows Build" icon="windows" href="/building/windows">
+    Detailed Windows build guide
+  </Card>
+  <Card title="Linux Build" icon="linux" href="/building/linux">
+    Linux build instructions
+  </Card>
+  <Card title="Build Setup" icon="wrench" href="/building/setup">
+    Build system overview
+  </Card>
+</CardGroup>

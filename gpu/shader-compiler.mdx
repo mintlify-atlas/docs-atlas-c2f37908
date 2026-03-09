@@ -1,0 +1,115 @@
+---
+title: Shader Compiler
+description: Command-line tool for shader translation and disassembly
+---
+
+The `xe-gpu-shader-compiler` is a standalone shader compiler that enables quick shader translation testing. It accepts binary microcode shaders and outputs either disassembled microcode or translated shader source code.
+
+## Overview
+
+This tool is designed for testing shader translation without running the full emulator. It's particularly useful when used in conjunction with the [Shader Playground](/gpu/shader-playground) for interactive development.
+
+## Usage
+
+The shader compiler accepts binary microcode files and can produce various output formats:
+
+```bash
+xe-gpu-shader-compiler \
+    --shader_input=input_file.bin.vs \
+    --shader_output=output_file.txt \
+    --shader_output_type=ucode
+```
+
+### Parameters
+
+- `--shader_input`: Path to the input binary shader file
+  - Use `.bin.vs` extension for vertex shaders
+  - Use `.bin.fs` extension for fragment shaders
+- `--shader_output`: Path where the translated output will be written
+- `--shader_output_type`: Output format type
+  - `ucode` - Disassembled microcode
+  - `spirvtext` - SPIR-V text representation
+
+## Input Files
+
+The compiler expects binary microcode shader files as input. These can be obtained through:
+
+1. **Shader dumps from the emulator** - Use the `--dump_shaders=path/` flag when running Xenia to export shaders
+2. **Manual shader compilation** - Create your own microcode files
+3. **Extracted game shaders** - From Xbox 360 game files
+
+### Shader Dumps
+
+When you run Xenia with shader dumping enabled:
+
+```bash
+xenia.exe --dump_shaders=path/to/output/ game.xex
+```
+
+Xenia will write all translated shaders to the specified path with names based on input hash. Binary files containing the original microcode are placed alongside the dumped output, making them easy to pipe to `xe-gpu-shader-compiler`.
+
+## Output Formats
+
+### Microcode Disassembly
+
+Using `--shader_output_type=ucode` produces human-readable disassembled shader microcode:
+
+```bash
+xe-gpu-shader-compiler \
+    --shader_input=shader_a3f2b1c5.bin.vs \
+    --shader_output=shader_disasm.txt \
+    --shader_output_type=ucode
+```
+
+### SPIR-V Text
+
+Using `--shader_output_type=spirvtext` generates SPIR-V assembly:
+
+```bash
+xe-gpu-shader-compiler \
+    --shader_input=shader_a3f2b1c5.bin.fs \
+    --shader_output=shader_spirv.txt \
+    --shader_output_type=spirvtext
+```
+
+## Workflow
+
+A typical shader debugging workflow:
+
+<Steps>
+  <Step title="Enable shader dumping">
+    Run Xenia with `--dump_shaders=path/` to export shaders from your game.
+  </Step>
+  
+  <Step title="Identify problematic shader">
+    Locate the shader file that corresponds to the visual issue you're investigating.
+  </Step>
+  
+  <Step title="Disassemble the shader">
+    Use `xe-gpu-shader-compiler` with `--shader_output_type=ucode` to examine the microcode.
+  </Step>
+  
+  <Step title="Analyze and debug">
+    Review the disassembled output to understand the shader's operations and identify issues.
+  </Step>
+  
+  <Step title="Test translations">
+    Use different output types to verify the shader translation is correct.
+  </Step>
+</Steps>
+
+## Related Tools
+
+- [Shader Playground](/gpu/shader-playground) - GUI for interactive shader development
+- [Trace Viewer](/gpu/trace-viewer) - Frame capture and analysis tool
+
+## Technical Details
+
+The shader compiler processes Xbox 360 GPU microcode, which is based on AMD's R5xx architecture (the Xenos chip). The translation must account for:
+
+- Xbox 360-specific instruction sets
+- Register allocation differences
+- Texture sampling conventions
+- Vertex/fragment shader variations
+
+For more information on shader formats and the Xenos architecture, see the [GPU documentation](/gpu).

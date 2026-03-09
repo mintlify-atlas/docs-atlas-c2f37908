@@ -1,0 +1,159 @@
+---
+title: "Architecture Overview"
+description: "High-level architecture of the Xenia Xbox 360 emulator"
+---
+
+Xenia is a high-level emulator (HLE) that emulates the Xbox 360 hardware at the system level. The emulator translates PowerPC code to x64 using JIT compilation and emulates the Xenos GPU, memory subsystem, and kernel environment.
+
+## Core Components
+
+The emulator is organized into four major subsystems that work together to replicate Xbox 360 functionality:
+
+### CPU Subsystem
+
+The CPU subsystem provides PowerPC emulation through a sophisticated JIT compiler:
+
+- **Processor** - Main entry point for code execution (`src/xenia/cpu/processor.h`)
+- **JIT Translator** - Converts PowerPC instructions to HIR (High-level Intermediate Representation)
+- **Compiler** - Optimizes HIR through multiple compilation passes
+- **x64 Backend** - Generates native x64 machine code from HIR
+
+The JIT translates Xbox 360's triple-core PowerPC 64-bit processor (running in 32-bit mode) to native x64 code that can run on modern CPUs.
+
+See [CPU Architecture](/architecture/cpu) for detailed information.
+
+### GPU Subsystem
+
+The GPU subsystem emulates the custom AMD Xenos graphics chip:
+
+- **Graphics System** - Top-level GPU management
+- **Command Processor** - Processes GPU command buffers from the ringbuffer (`src/xenia/gpu/command_processor.cc`)
+- **Shader Translator** - Converts Xenos shader microcode to SPIR-V/DXBC
+- **Vulkan/D3D12 Backend** - Renders using modern graphics APIs
+- **EDRAM Emulation** - Emulates on-die embedded DRAM for framebuffers
+
+The Xenos chip was based on AMD's R5xx architecture and contained unified shader processors along with 10MB of EDRAM.
+
+See [GPU Architecture](/architecture/gpu) for detailed information.
+
+### Memory Subsystem
+
+The memory subsystem manages both virtual and physical memory spaces:
+
+- **Memory Manager** - Maps guest memory to host address space (`src/xenia/memory.h`)
+- **Heaps** - Page-based allocation for virtual and physical regions
+- **MMU** - Handles memory protection and address translation
+
+The Xbox 360 had 512MB of unified GDDR3 RAM shared between CPU and GPU. Xenia maps this to host memory with careful address space management.
+
+See [Memory Architecture](/architecture/memory) for detailed information.
+
+### Kernel Subsystem
+
+The kernel subsystem implements Xbox 360 system software:
+
+- **Kernel State** - Tracks all kernel objects and system state (`src/xenia/kernel/kernel_state.h`)
+- **Export Resolver** - Links game imports to kernel exports
+- **xboxkrnl.exe** - NT kernel implementation with Xbox modifications
+- **xam.xex** - Xbox Application Manager for system services
+- **Object Manager** - Manages kernel objects (threads, events, mutexes, etc.)
+
+The kernel emulation is high-level, implementing system calls as native functions rather than emulating the original kernel code.
+
+See [Kernel Architecture](/architecture/kernel) for detailed information.
+
+## Component Interaction
+
+The emulator's components are orchestrated by the main `Emulator` class (`src/xenia/emulator.h`):
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Emulator                         │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  ┌──────────────┐  ┌──────────────┐               │
+│  │  Processor   │  │   Graphics   │               │
+│  │   (CPU)      │  │    System    │               │
+│  │              │  │    (GPU)     │               │
+│  └──────┬───────┘  └──────┬───────┘               │
+│         │                 │                        │
+│         └────────┬────────┘                        │
+│                  │                                 │
+│         ┌────────▼────────┐                        │
+│         │     Memory      │                        │
+│         │                 │                        │
+│         └────────┬────────┘                        │
+│                  │                                 │
+│         ┌────────▼────────┐                        │
+│         │  Kernel State   │                        │
+│         │                 │                        │
+│         └─────────────────┘                        │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Execution Flow
+
+1. **Initialization** (`Emulator::Setup`)
+   - Creates memory manager with virtual/physical address spaces
+   - Initializes CPU processor with JIT backend
+   - Sets up graphics system with chosen backend (Vulkan/D3D12)
+   - Creates kernel state and export resolver
+   - Mounts file systems for game content
+
+2. **Game Loading** (`Emulator::LaunchPath`)
+   - Parses XEX (Xbox Executable) format
+   - Maps executable sections into memory
+   - Resolves kernel imports and exports
+   - Creates initial thread in kernel
+
+3. **Runtime Execution**
+   - CPU executes translated code, calling kernel exports via syscalls
+   - Games submit command buffers to GPU via ringbuffer in system memory
+   - GPU command processor fetches and executes commands
+   - Memory is shared between CPU and GPU, similar to real hardware
+
+4. **System Calls**
+   - JIT-compiled code encounters syscall instruction
+   - Transitions from guest context to host
+   - Kernel export function executes (native C++ code)
+   - Returns to guest code with results
+
+## Design Philosophy
+
+### High-Level Emulation (HLE)
+
+Xenia uses HLE for the kernel, implementing Xbox 360 system calls as native functions rather than emulating the actual kernel code. This approach:
+
+- Provides better performance than low-level emulation
+- Simplifies implementation of complex OS features
+- Allows focusing optimization on game code translation
+- Requires careful reverse engineering of system call behavior
+
+### JIT Compilation
+
+The CPU uses Just-In-Time compilation rather than interpretation:
+
+- Translates PowerPC blocks to HIR on first execution
+- Applies optimization passes to HIR
+- Generates optimized x64 code
+- Caches compiled code for subsequent execution
+- Dramatically faster than interpretation
+
+### Accuracy vs Performance
+
+Xenia balances accuracy and performance:
+
+- CPU timing is not cycle-accurate (games rarely depend on exact timing)
+- GPU command processing is asynchronous like real hardware
+- Memory protection and page tables are emulated
+- Most system behavior is functionally accurate without perfect timing
+
+## Next Steps
+
+Explore each subsystem in detail:
+
+- [CPU Architecture](/architecture/cpu) - JIT translation, HIR, and code generation
+- [GPU Architecture](/architecture/gpu) - Command processing, shaders, and rendering
+- [Memory Architecture](/architecture/memory) - Virtual memory, heaps, and memory mapping
+- [Kernel Architecture](/architecture/kernel) - System calls, modules, and kernel objects

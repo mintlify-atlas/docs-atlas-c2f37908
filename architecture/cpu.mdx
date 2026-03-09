@@ -1,0 +1,261 @@
+---
+title: "CPU Architecture"
+description: "PowerPC JIT compilation and code translation in Xenia"
+---
+
+The Xenia CPU subsystem emulates the Xbox 360's triple-core PowerPC processor through Just-In-Time (JIT) compilation. It translates PowerPC machine code to native x64 instructions at runtime, enabling Xbox 360 games to run at near-native performance.
+
+## Xbox 360 CPU
+
+The Xbox 360 CPU (codenamed "Xenon") is a custom IBM PowerPC processor:
+
+- **Architecture**: PowerPC 64-bit (running in 32-bit mode)
+- **Cores**: 3 cores, each with 2 hardware threads (6 logical processors)
+- **Clock Speed**: 3.2 GHz
+- **Instruction Set**: PowerPC with AltiVec (VMX) and VMX128 extensions
+- **Registers**: 64-bit general purpose and vector registers
+
+Games can use 64-bit instructions even in 32-bit mode, and registers remain 64-bit. The processor is similar to the Cell PPU in PlayStation 3, with additional AltiVec instructions specific to Xbox 360.
+
+## JIT Translation Pipeline
+
+![JIT Diagram](https://github.com/xenia-project/xenia/blob/master/docs/images/CPU-JIT.png?raw=true)
+
+The JIT translates PowerPC code through three main phases:
+
+### Phase 1: Translation to HIR
+
+PowerPC instructions are translated to Xenia's High-level Intermediate Representation (HIR):
+
+- **Scanner** (`src/xenia/cpu/ppc/ppc_scanner.h`) - Analyzes code to find basic blocks and functions
+- **HIR Builder** (`src/xenia/cpu/ppc/ppc_hir_builder.h`) - Constructs HIR from PowerPC instructions
+- **Emitters** (`src/xenia/cpu/ppc/ppc_emit_*.cc`) - Per-instruction translation logic
+
+Each PowerPC instruction category has its own emitter:
+
+- `ppc_emit_control.cc` - Branch, call, and control flow instructions
+- `ppc_emit_alu.cc` - Integer arithmetic and logical operations
+- `ppc_emit_fpu.cc` - Floating-point operations
+- `ppc_emit_altivec.cc` - Vector (AltiVec/VMX) instructions
+
+HIR opcodes are relatively simple and architecture-agnostic, making it easy to implement new backends.
+
+**Example Translation:**
+
+```
+PowerPC:  add r3, r4, r5
+HIR:      v0 = load_context offset=GPR[4]
+          v1 = load_context offset=GPR[5]
+          v2 = add v0, v1
+          store_context offset=GPR[3], v2
+```
+
+### Phase 2: HIR Optimization
+
+The HIR passes through a series of compiler passes for optimization:
+
+**Pass Order** (from `src/xenia/cpu/ppc/ppc_translator.cc`):
+
+1. **Control Flow Analysis** - Builds control flow graph (CFG)
+2. **Control Flow Simplification** - Merges blocks and removes dead branches
+3. **Context Promotion** - Promotes frequently-used context values to registers
+4. **Simplification + Constant Propagation** (loop until no changes)
+   - Simplifies expressions and eliminates redundant operations
+   - Propagates constants through expressions
+5. **Memory Sequence Combination** - Combines adjacent loads/stores
+6. **Dead Code Elimination** - Removes unused instructions
+7. **Value Reduction** - Simplifies value representations
+
+**Key Optimizations:**
+
+- **Context Promotion** - PowerPC registers are stored in a context structure. This pass promotes hot registers to x64 registers, avoiding memory loads/stores.
+- **Constant Propagation** - Detects compile-time constants and folds them into instructions
+- **Dead Store Elimination** - Removes writes to memory/registers that are never read
+
+Passes are defined in `src/xenia/cpu/compiler/passes/` with descriptive names.
+
+### Phase 3: Backend Code Generation
+
+The x64 backend consumes HIR and emits native machine code:
+
+- **x64 Backend** (`src/xenia/cpu/backend/x64/x64_backend.cc`) - Main backend implementation
+- **x64 Sequences** (`src/xenia/cpu/backend/x64/x64_sequences.cc`) - HIR to x64 instruction sequences
+- **x64 Emitter** (`src/xenia/cpu/backend/x64/x64_emitter.cc`) - Generates actual x64 machine code
+- **Code Cache** (`src/xenia/cpu/backend/x64/x64_code_cache.cc`) - Stores compiled code
+
+The backend maps each HIR opcode to a sequence of x64 instructions. Complex operations may expand into multiple instructions.
+
+## x64 ABI and Register Mapping
+
+Xenia guest functions cannot be called directly from host code. Calls transition through a thunk that sets up the guest execution environment.
+
+### Transition Thunks
+
+Defined in `src/xenia/cpu/backend/x64/x64_backend.cc:389`:
+
+1. **Host → Guest**: Saves host registers, loads guest context, jumps to JIT code
+2. **Guest → Host**: Saves guest context, restores host registers, returns
+
+Registers are stored on the stack according to `StackLayout::Thunk` (`src/xenia/cpu/backend/x64/x64_stack_layout.h:96`).
+
+### Register Allocation
+
+From `src/xenia/cpu/backend/x64/x64_emitter.cc:57`:
+
+#### Integer Registers
+
+| x64 Register | Usage |
+|--------------|-------|
+| RAX | Scratch (temporary values) |
+| RBX | JIT temporary |
+| RCX | Scratch |
+| RDX | Scratch |
+| RSP | Stack Pointer |
+| RBP | Unused |
+| RSI | **PowerPC Context Pointer** |
+| RDI | **Virtual Memory Base** |
+| R8-R11 | Unused (available for parameters) |
+| R12-R15 | JIT temporaries |
+
+**Key Registers:**
+- **RSI** always points to the PowerPC context structure (guest registers)
+- **RDI** always points to the base of guest virtual memory
+
+This allows fast access to guest state without additional loads.
+
+#### Floating Point Registers
+
+| x64 Register | Usage |
+|--------------|-------|
+| XMM0-XMM5 | Scratch (temporary values) |
+| XMM6-XMM15 | JIT temporaries |
+
+Vector registers XMM6-XMM15 can cache frequently-used PowerPC vector registers.
+
+### Calling Convention
+
+Guest function parameters and return values follow PowerPC ABI:
+
+- **Parameters**: r3-r10 (additional on stack)
+- **Return value**: r3 (32-bit) or r3:r4 (64-bit)
+- **Floating point**: f1-f13 for parameters
+
+The deprecated `SHIM_CALL` convention shows this explicitly:
+- `SHIM_GET_ARG_32(n)` - Reads from r3+n
+- `SHIM_SET_RETURN_32(v)` - Writes to r3
+
+Newer shim functions use templates to automate parameter marshalling.
+
+## Memory Access
+
+Guest memory accesses are translated to host accesses:
+
+### Virtual Memory
+
+PowerPC load/store instructions access guest virtual memory:
+
+```assembly
+PowerPC:  lwz r3, 0x100(r4)     # Load word from r4+0x100
+
+x64:      mov ecx, [rsi+GPR[4]]  # Load r4 from context
+          mov eax, [rdi+rcx+0x100] # Load from memory (RDI=membase)
+          mov [rsi+GPR[3]], eax   # Store to r3 in context
+```
+
+RDI holds the virtual memory base, so `[rdi+address]` accesses guest memory directly.
+
+### Memory Barriers
+
+PowerPC has explicit memory synchronization instructions:
+
+- `sync` - Memory barrier
+- `isync` - Instruction synchronization
+- `eieio` - Enforce in-order execution of I/O
+
+These translate to x64 fence instructions (mfence, lfence) or may be no-ops depending on context.
+
+## Code Cache
+
+Compiled code is stored in the code cache (`src/xenia/cpu/backend/x64/x64_code_cache.cc`):
+
+- Functions are compiled once and cached
+- Cache is searched by guest address before recompiling
+- Generated code is stored in executable memory pages
+- On Windows and POSIX, uses platform-specific memory APIs for RWX pages
+
+## System Call Handling
+
+When guest code calls a kernel function:
+
+1. Loader replaces kernel import with `sc` (syscall) instruction
+2. JIT detects syscall and emits call to kernel export handler
+3. Execution transitions from guest to host
+4. Kernel export (native C++) executes
+5. Return value is placed in r3
+6. Execution returns to guest code
+
+See [Kernel Architecture](/architecture/kernel) for details on the kernel export system.
+
+## Multi-threading
+
+The Xbox 360 has 3 cores with 2 hardware threads each (6 logical processors). Xenia emulates this:
+
+- Each guest thread runs on a host thread
+- Thread scheduling is handled by the host OS
+- Synchronization primitives (mutexes, events) are implemented in kernel
+- Lock-free atomic operations translate to x64 lock prefix instructions
+
+## Performance Considerations
+
+### JIT Compilation Overhead
+
+- First execution of a function incurs compilation cost
+- Subsequent calls execute cached native code
+- Hot functions compile quickly (< 1ms typically)
+- Games with large code bases may have longer initial loads
+
+### Optimization Trade-offs
+
+- More optimization passes improve code quality but increase compile time
+- Context promotion is critical for performance (avoids memory traffic)
+- Some passes can be disabled for faster compilation (e.g., `--disable_context_promotion`)
+
+### Accuracy vs Speed
+
+- CPU timing is not cycle-accurate
+- Branch prediction behavior differs from real hardware
+- Most games don't depend on exact timing
+- Games with tight timing loops may have issues
+
+## Debugging and Analysis
+
+### HIR Dumping
+
+Use `--dump_translated_hir_functions=true` to dump HIR for all translated functions. Useful for:
+
+- Understanding translation issues
+- Analyzing optimization effectiveness
+- Debugging crashes in generated code
+
+### Disassembly
+
+Generated x64 code can be inspected with debuggers:
+
+- Set breakpoints in JIT code
+- Single-step through generated instructions
+- Compare with original PowerPC disassembly
+
+## References
+
+### PowerPC Architecture
+
+- [Free60 Xenon CPU Info](https://free60project.github.io/wiki/Xenon_(CPU))
+- [Power ISA Specification](https://web.archive.org/web/20140603115759/https://www.power.org/wp-content/uploads/2012/07/PowerISA_V2.06B_V2_PUBLIC.pdf)
+- [PowerPC Programming Environments Manual](https://web.archive.org/web/20141028181028/https://www-01.ibm.com/chips/techlib/techlib.nsf/techdocs/F7E732FF811F783187256FDD004D3797/$file/pem_64bit_v3.0.2005jul15.pdf)
+- [AltiVec Programming Environment Manual](https://web.archive.org/web/20151110180336/https://cache.freescale.com/files/32bit/doc/ref_manual/ALTIVECPEM.pdf)
+- [VMX128 Opcodes](http://biallas.net/doc/vmx128/vmx128.txt)
+
+### x64 Architecture
+
+- [Intel Software Developer Manuals](https://software.intel.com/en-us/articles/intel-sdm)
+- [Apple AltiVec/SSE Migration Guide](https://developer.apple.com/legacy/library/documentation/Performance/Conceptual/Accelerate_sse_migration/Accelerate_sse_migration.pdf)

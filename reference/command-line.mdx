@@ -1,0 +1,326 @@
+---
+title: Command-Line Arguments
+description: Complete reference for Xenia command-line flags and options
+---
+
+Xenia supports numerous command-line arguments for controlling emulator behavior, debugging, and advanced configuration.
+
+## Basic Usage
+
+```bash
+xenia [options] <game_path>
+```
+
+Where `<game_path>` can be:
+- Path to an `.xex` executable
+- Path to an `.iso` disc image
+- Path to a game directory
+
+## General Options
+
+<ParamField path="--config" type="string" default="">
+  Specify a custom configuration file path. Can be absolute or relative.
+  
+  ```bash
+  xenia --config=custom.toml game.xex
+  ```
+</ParamField>
+
+<ParamField path="--headless" type="boolean" default="false">
+  Run without displaying any UI, using defaults for all prompts. Useful for automated testing and benchmarking.
+  
+  ```bash
+  xenia --headless game.xex
+  ```
+</ParamField>
+
+## GPU Options
+
+### Rendering
+
+<ParamField path="--vsync" type="boolean" default="true">
+  Enable or disable vertical synchronization. Disabling allows the emulator to run as fast as possible.
+  
+  ```bash
+  xenia --vsync=false game.xex
+  ```
+</ParamField>
+
+<ParamField path="--framerate_limit" type="uint64" default="60">
+  Set maximum frames per second. Use `0` for unlimited.
+  
+  ```bash
+  xenia --framerate_limit=120 game.xex
+  ```
+</ParamField>
+
+<ParamField path="--gpu_allow_invalid_fetch_constants" type="boolean" default="true">
+  Allow texture and vertex fetch constants with invalid types. May help with some games but is generally unsafe.
+  
+  ```bash
+  xenia --gpu_allow_invalid_fetch_constants=false game.xex
+  ```
+</ParamField>
+
+<ParamField path="--half_pixel_offset" type="boolean" default="true">
+  Enable vertex half-pixel offset support (D3D9 behavior).
+  
+  ```bash
+  xenia --half_pixel_offset=false game.xex
+  ```
+</ParamField>
+
+### Debugging and Tracing
+
+<ParamField path="--trace_gpu_prefix" type="path" default="scratch/gpu/">
+  Set the prefix path for GPU trace files. Used with F4 key to capture frames.
+  
+  ```bash
+  xenia --trace_gpu_prefix=traces/game1_ game.xex
+  ```
+  
+  See the [GPU Trace Viewer](/gpu/trace-viewer) documentation for more details.
+</ParamField>
+
+<ParamField path="--trace_gpu_stream" type="boolean" default="false">
+  Trace all GPU packets to a file, allowing frame-by-frame seeking in the trace viewer. Warning: creates large files.
+  
+  ```bash
+  xenia --trace_gpu_stream game.xex
+  ```
+</ParamField>
+
+<ParamField path="--dump_shaders" type="path" default="">
+  Dump all compiled GPU shaders to the specified path for debugging. Shaders are named by their input hash.
+  
+  ```bash
+  xenia --dump_shaders=shaders/output/ game.xex
+  ```
+</ParamField>
+
+### Advanced GPU Settings
+
+<ParamField path="--non_seamless_cube_map" type="boolean" default="true">
+  Disable filtering between cube map faces (requires VK_EXT_non_seamless_cube_map on Vulkan).
+</ParamField>
+
+<ParamField path="--query_occlusion_sample_lower_threshold" type="int32" default="80">
+  Lower threshold for occlusion query sample counts. Set to `-1` to disable.
+</ParamField>
+
+<ParamField path="--query_occlusion_sample_upper_threshold" type="int32" default="100">
+  Upper threshold for occlusion query sample counts.
+</ParamField>
+
+## CPU Options
+
+<ParamField path="--cpu" type="string" default="any">
+  Select CPU backend. Options: `any`, `x64`. Currently has no practical effect.
+</ParamField>
+
+<ParamField path="--pvr" type="uint64" default="0x710700">
+  Set the Processor Version Register value. Different Xbox 360 models used different values:
+  - `0x710200` - Zephyr
+  - `0x710300` - Zephyr
+  - `0x710500` - Jasper
+  - `0x710700` - Default
+  - `0x710800` - Corona V1 & V2
+  
+  ```bash
+  xenia --pvr=0x710500 game.xex
+  ```
+</ParamField>
+
+### Debugging
+
+<ParamField path="--load_module_map" type="path" default="">
+  Load a .map file for symbol names and comparison with the generated symbol database.
+  
+  ```bash
+  xenia --load_module_map=game.map game.xex
+  ```
+</ParamField>
+
+<ParamField path="--disassemble_functions" type="boolean" default="false">
+  Disassemble functions during JIT compilation. Useful for debugging recompiler issues.
+  
+  ```bash
+  xenia --disassemble_functions game.xex
+  ```
+</ParamField>
+
+<ParamField path="--trace_functions" type="boolean" default="false">
+  Enable function execution tracing for statistics collection.
+</ParamField>
+
+<ParamField path="--trace_function_coverage" type="boolean" default="false">
+  Generate tracing for function instruction coverage statistics.
+</ParamField>
+
+<ParamField path="--trace_function_references" type="boolean" default="false">
+  Generate tracing for function address references.
+</ParamField>
+
+<ParamField path="--trace_function_data" type="boolean" default="false">
+  Generate tracing for function result data.
+</ParamField>
+
+<ParamField path="--validate_hir" type="boolean" default="false">
+  Perform validation checks on the HIR (High-level Intermediate Representation) during compilation.
+</ParamField>
+
+### Breakpoints
+
+<ParamField path="--break_on_instruction" type="uint64" default="0">
+  Trigger a debugger breakpoint (int3) before executing the specified guest address.
+  
+  ```bash
+  xenia --break_on_instruction=0x82000000 game.xex
+  ```
+</ParamField>
+
+<ParamField path="--break_condition_gpr" type="int32" default="-1">
+  GPR (General Purpose Register) to compare for conditional breakpoints.
+</ParamField>
+
+<ParamField path="--break_condition_value" type="uint64" default="0">
+  Value to compare against for conditional breakpoints.
+</ParamField>
+
+<ParamField path="--break_condition_op" type="string" default="eq">
+  Comparison operator for conditional breakpoints (e.g., `eq`, `ne`, `gt`, `lt`).
+</ParamField>
+
+<ParamField path="--break_condition_truncate" type="boolean" default="true">
+  Truncate comparison value to 32 bits for conditional breakpoints.
+</ParamField>
+
+<ParamField path="--break_on_debugbreak" type="boolean" default="true">
+  Trigger int3 on JITed `__debugbreak` requests from game code.
+</ParamField>
+
+## APU Options
+
+<ParamField path="--mute" type="boolean" default="false">
+  Mute all audio output from the emulator.
+  
+  ```bash
+  xenia --mute game.xex
+  ```
+</ParamField>
+
+## HID Options
+
+<ParamField path="--guide_button" type="boolean" default="true">
+  Forward Xbox Guide button presses to the game. Set to `false` to prevent games from receiving guide button input.
+  
+  ```bash
+  xenia --guide_button=false game.xex
+  ```
+</ParamField>
+
+## Kernel Options
+
+<ParamField path="--log_high_frequency_kernel_calls" type="boolean" default="false">
+  Enable logging of high-frequency kernel calls. Warning: generates massive log files.
+  
+  ```bash
+  xenia --log_high_frequency_kernel_calls game.xex
+  ```
+</ParamField>
+
+## Usage Examples
+
+### Performance Testing
+
+Run a game at maximum speed without vsync:
+
+```bash
+xenia --vsync=false --framerate_limit=0 game.xex
+```
+
+### Debug Session
+
+Capture GPU traces and dump shaders while running:
+
+```bash
+xenia --trace_gpu_prefix=traces/game1_ --dump_shaders=shaders/ game.xex
+```
+
+During gameplay, press **F4** to capture the current frame.
+
+### Compatibility Testing
+
+Test with a specific PVR value and no audio:
+
+```bash
+xenia --pvr=0x710500 --mute game.xex
+```
+
+### Automated Testing
+
+Run headless with custom config:
+
+```bash
+xenia --headless --config=test.toml game.xex
+```
+
+### Function Analysis
+
+Trace function execution with disassembly:
+
+```bash
+xenia --trace_functions --disassemble_functions --load_module_map=symbols.map game.xex
+```
+
+## Combining with Config Files
+
+Command-line arguments override config file settings. This is useful for:
+
+- **Quick testing** without modifying config files
+- **Scripted testing** with different parameters
+- **Per-session overrides** for specific debugging scenarios
+
+Example workflow:
+
+```bash
+# Normal config has vsync enabled
+# Temporarily disable for benchmark
+xenia --vsync=false --framerate_limit=0 game.xex
+
+# Config settings remain unchanged for next run
+xenia game.xex
+```
+
+## Boolean Flag Syntax
+
+Boolean flags support multiple syntaxes:
+
+```bash
+# All equivalent ways to enable
+--vsync=true
+--vsync
+
+# All equivalent ways to disable  
+--vsync=false
+--no-vsync
+--novsync
+```
+
+## Tips
+
+<Tip>
+  Use `--trace_gpu_prefix` with descriptive names when capturing multiple games:
+  ```bash
+  xenia --trace_gpu_prefix=traces/halo3_ halo3.xex
+  xenia --trace_gpu_prefix=traces/gears_ gears.xex
+  ```
+</Tip>
+
+<Warning>
+  Enabling `--trace_gpu_stream` can create multi-gigabyte files. Ensure you have adequate disk space before using this option.
+</Warning>
+
+<Info>
+  Command-line arguments take precedence over both global and game-specific config files, making them ideal for testing without permanent configuration changes.
+</Info>

@@ -1,0 +1,127 @@
+---
+title: 'Build Setup'
+description: 'Initial setup and overview of the Xenia build system'
+---
+
+## Overview
+
+Xenia uses a custom Python-based build script (`xenia-build.py`) that wraps premake5 and the native build tools for your platform. The build system supports Windows, Linux (experimental), and macOS (experimental).
+
+<Note>
+  You must have a **64-bit machine** for building and running Xenia. Always run your system updater before building and ensure you have the latest drivers.
+</Note>
+
+## Prerequisites
+
+### Common Requirements
+
+- 64-bit operating system and CPU
+- [Git](https://git-scm.com/downloads)
+- [Python 3.9+ (64-bit)](https://www.python.org/downloads/)
+  - Ensure Python is added to your PATH
+- CMake 3.10+ (or C++ CMake tools)
+
+### Platform-Specific Requirements
+
+<CardGroup cols={2}>
+  <Card title="Windows" icon="windows" href="/building/windows">
+    Visual Studio 2022, Windows 11 SDK, Python 3.9+
+  </Card>
+  <Card title="Linux" icon="linux" href="/building/linux">
+    Clang 19, development libraries, Vulkan drivers (experimental)
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/xenia-canary/xenia-canary.git
+    cd xenia-canary
+    ```
+  </Step>
+
+  <Step title="Run Initial Setup">
+    The `xb setup` command will initialize git submodules and run premake:
+    
+    ```bash
+    xb setup
+    ```
+  </Step>
+
+  <Step title="Build the Project">
+    Build in debug mode (default):
+    
+    ```bash
+    xb build
+    ```
+    
+    Or build in release mode:
+    
+    ```bash
+    xb build --config=release
+    ```
+  </Step>
+</Steps>
+
+## Build System Architecture
+
+The Xenia build system consists of:
+
+1. **xenia-build.py** (`xb` wrapper) - Main build script that orchestrates the build process
+2. **premake5.lua** - Build configuration that generates platform-specific project files
+3. **Platform Build Tools**:
+   - Windows: MSBuild (Visual Studio)
+   - Linux: CMake + Ninja
+   - macOS: Xcode
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="xb Build Script" icon="terminal" href="/building/xb-script">
+    Learn about all available xb commands
+  </Card>
+  <Card title="Windows Build" icon="windows" href="/building/windows">
+    Detailed Windows build instructions
+  </Card>
+  <Card title="Linux Build" icon="linux" href="/building/linux">
+    Linux build instructions (experimental)
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Python not found error">
+    Ensure Python 3.9+ 64-bit is installed and added to your PATH. You can verify by running:
+    
+    ```bash
+    python --version
+    ```
+    
+    The version should be 3.9 or higher and show 64-bit.
+  </Accordion>
+
+  <Accordion title="Git submodule errors">
+    If you encounter submodule errors, try manually updating:
+    
+    ```bash
+    git submodule update --init --depth=1 -j <cpu_count>
+    ```
+  </Accordion>
+
+  <Accordion title="Build fails after updating">
+    After pulling latest changes, always run premake again:
+    
+    ```bash
+    xb premake
+    ```
+    
+    Or use the pull command which does this automatically:
+    
+    ```bash
+    xb pull
+    ```
+  </Accordion>
+</AccordionGroup>

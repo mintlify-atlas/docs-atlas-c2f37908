@@ -1,0 +1,612 @@
+---
+title: Installation
+description: Detailed installation instructions for Xenia on Windows and Linux
+---
+
+## Installation Overview
+
+This guide covers detailed installation steps for Xenia on both Windows and Linux platforms. Choose your platform below to get started.
+
+<CardGroup cols={2}>
+  <Card title="Windows Installation" icon="windows" href="#windows-installation">
+    Full support with Visual Studio 2022
+  </Card>
+  <Card title="Linux Installation" icon="linux" href="#linux-installation">
+    Experimental support with Clang 19+
+  </Card>
+</CardGroup>
+
+## System Requirements
+
+### Minimum Requirements
+
+- **Processor**: 64-bit x86_64 CPU with AVX support
+- **Memory**: 4GB RAM
+- **Graphics**: GPU with Vulkan 1.1 or Direct3D 12 support
+- **Storage**: 500MB for Xenia + game-dependent storage
+- **Operating System**: Windows 10/11 or modern Linux distribution
+
+### Recommended Requirements
+
+- **Processor**: Modern Intel Core i5/AMD Ryzen 5 or better
+- **Memory**: 8GB RAM or more
+- **Graphics**: NVIDIA GTX 1060 / AMD RX 580 or better with latest drivers
+- **Storage**: SSD with 20GB+ free space
+- **Operating System**: Windows 11 or Ubuntu 22.04+
+
+<Note>
+A 64-bit system is **required** - Xenia cannot run on 32-bit systems.
+</Note>
+
+---
+
+## Windows Installation
+
+### Option 1: Download Pre-Built Binary (Recommended)
+
+<Steps>
+  <Step title="Download Xenia">
+    Choose a Xenia variant based on your needs:
+    
+    <Tabs>
+      <Tab title="Xenia Canary (Recommended)">
+        **Xenia Canary** is the most actively maintained fork with the latest features and fixes.
+        
+        1. Visit [xenia-canary releases](https://github.com/xenia-canary/xenia-canary-releases/releases/latest)
+        2. Download `xenia_canary.zip`
+        3. Extract to your desired location (e.g., `C:\Xenia\`)
+        
+        <Tip>
+        Xenia Canary includes improvements like better compatibility, performance optimizations, and additional features.
+        </Tip>
+      </Tab>
+      
+      <Tab title="Xenia Master">
+        **Xenia Master** is the original branch (less frequently updated).
+        
+        1. Visit [xenia-project releases](https://github.com/xenia-project/release-builds-windows/releases/latest)
+        2. Download `xenia_master.zip`
+        3. Extract to your desired location
+      </Tab>
+      
+      <Tab title="Xenia Mousehook Fork">
+        **Xenia Mousehook** adds mouse input support for FPS games.
+        
+        1. Visit [mousehook fork releases](https://github.com/marinesciencedude/xenia-canary-mousehook/releases/latest)
+        2. Download the latest build
+        3. Extract to your desired location
+        
+        <Note>
+        This fork is specifically useful for games that benefit from mouse and keyboard controls.
+        </Note>
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Install Prerequisites">
+    ### Visual C++ Redistributables
+    
+    Xenia requires Visual C++ Redistributables to run:
+    
+    1. Download [Visual C++ Redistributable 2022](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+    2. Run the installer
+    3. Restart your computer if prompted
+    
+    ### Graphics Drivers
+    
+    Ensure you have the latest GPU drivers:
+    
+    - **NVIDIA**: [GeForce Drivers](https://www.nvidia.com/download/index.aspx)
+    - **AMD**: [Radeon Drivers](https://www.amd.com/en/support)
+    - **Intel**: [Arc/Iris Drivers](https://www.intel.com/content/www/us/en/download-center/home.html)
+  </Step>
+  
+  <Step title="Configure Windows Defender (Optional)">
+    Some users report Windows Defender impacting performance:
+    
+    1. Open **Windows Security** → **Virus & threat protection**
+    2. Click **Manage settings** under "Virus & threat protection settings"
+    3. Click **Add or remove exclusions**
+    4. Add the Xenia folder as an exclusion
+    
+    <Warning>
+    Only exclude folders you trust. Only download Xenia from official sources.
+    </Warning>
+  </Step>
+  
+  <Step title="First Run">
+    1. Navigate to your Xenia folder
+    2. Double-click `xenia.exe` or `xenia_canary.exe`
+    3. Xenia will create configuration files on first launch
+    4. The main window should appear
+    
+    <Note>
+    If you see an error about missing DLLs, ensure you've installed the Visual C++ Redistributables.
+    </Note>
+  </Step>
+</Steps>
+
+### Option 2: Build from Source
+
+For developers or those who want the latest changes:
+
+<Steps>
+  <Step title="Install Build Tools">
+    Install the required development tools:
+    
+    1. **Visual Studio 2022** (Community Edition or higher)
+       - Download from [visualstudio.com](https://visualstudio.microsoft.com/downloads/)
+       - During installation, select:
+         - "Desktop development with C++"
+         - "C++ CMake tools for Windows"
+         - "Windows 11 SDK (10.0.22000.0 or newer)"
+    
+    2. **Python 3.9 or later (64-bit)**
+       - Download from [python.org](https://www.python.org/downloads/)
+       - **Important**: Check "Add Python to PATH" during installation
+    
+    3. **Git for Windows**
+       - Download from [git-scm.com](https://git-scm.com/download/win)
+  </Step>
+  
+  <Step title="Clone Repository">
+    Open Command Prompt or PowerShell:
+    
+    ```bash
+    # Clone Xenia Canary (recommended)
+    git clone https://github.com/xenia-canary/xenia-canary.git
+    cd xenia-canary
+    
+    # Or clone original Xenia
+    # git clone https://github.com/xenia-project/xenia.git
+    # cd xenia
+    ```
+  </Step>
+  
+  <Step title="Run Build Setup">
+    Initialize the build environment:
+    
+    ```bash
+    xb setup
+    ```
+    
+    This command will:
+    - Update git submodules
+    - Configure the build environment
+    - Run premake to generate project files
+  </Step>
+  
+  <Step title="Build Xenia">
+    Build using the `xb` script:
+    
+    <CodeGroup>
+    ```bash Debug Build
+    xb build
+    ```
+    
+    ```bash Release Build
+    xb build --config=release
+    ```
+    
+    ```bash Build and Open Visual Studio
+    xb devenv
+    ```
+    </CodeGroup>
+    
+    The built executable will be in:
+    - **Debug**: `build/bin/Windows/Debug/xenia.exe`
+    - **Release**: `build/bin/Windows/Release/xenia.exe`
+    
+    <Tip>
+    Use Release builds for playing games. Debug builds are significantly slower and meant for development.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Linux Installation
+
+<Warning>
+**Linux support is extremely experimental** and presently incomplete. Many features may not work correctly. Expect issues with audio, input, and game compatibility.
+</Warning>
+
+### Prerequisites
+
+<Steps>
+  <Step title="Install System Dependencies">
+    Install required packages for your distribution:
+    
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt-get update
+    sudo apt-get install -y \
+      build-essential \
+      clang-19 \
+      llvm-19 \
+      libc++-dev \
+      libc++abi-dev \
+      libgtk-3-dev \
+      liblz4-dev \
+      libsdl2-dev \
+      libvulkan-dev \
+      libx11-xcb-dev \
+      mesa-vulkan-drivers \
+      ninja-build \
+      python3 \
+      git
+    ```
+    
+    ```bash Arch Linux
+    sudo pacman -S --needed \
+      base-devel \
+      clang \
+      llvm \
+      libc++ \
+      gtk3 \
+      lz4 \
+      sdl2 \
+      vulkan-headers \
+      vulkan-icd-loader \
+      libx11 \
+      libxcb \
+      ninja \
+      python \
+      git
+    ```
+    
+    ```bash Fedora
+    sudo dnf install -y \
+      gcc-c++ \
+      clang \
+      llvm \
+      libcxx-devel \
+      gtk3-devel \
+      lz4-devel \
+      SDL2-devel \
+      vulkan-headers \
+      vulkan-loader-devel \
+      libX11-devel \
+      libxcb-devel \
+      ninja-build \
+      python3 \
+      git
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Install Vulkan Drivers">
+    Ensure you have proper Vulkan support for your GPU:
+    
+    <Tabs>
+      <Tab title="NVIDIA">
+        ```bash
+        # Install proprietary NVIDIA drivers
+        sudo apt-get install nvidia-driver-XXX  # Replace XXX with version
+        
+        # Verify Vulkan
+        vulkaninfo | grep "GPU"
+        ```
+      </Tab>
+      
+      <Tab title="AMD">
+        ```bash
+        # Mesa drivers (usually pre-installed)
+        sudo apt-get install mesa-vulkan-drivers vulkan-tools
+        
+        # Verify Vulkan
+        vulkaninfo | grep "GPU"
+        ```
+      </Tab>
+      
+      <Tab title="Intel">
+        ```bash
+        # Intel Vulkan drivers
+        sudo apt-get install mesa-vulkan-drivers intel-media-va-driver vulkan-tools
+        
+        # Verify Vulkan
+        vulkaninfo | grep "GPU"
+        ```
+      </Tab>
+    </Tabs>
+    
+    <Note>
+    If `vulkaninfo` doesn't work, install it with: `sudo apt-get install vulkan-tools`
+    </Note>
+  </Step>
+  
+  <Step title="Set Compiler Environment">
+    Configure the build to use Clang 19:
+    
+    ```bash
+    export CC=clang-19
+    export CXX=clang++-19
+    
+    # Add to ~/.bashrc for persistence:
+    echo 'export CC=clang-19' >> ~/.bashrc
+    echo 'export CXX=clang++-19' >> ~/.bashrc
+    ```
+  </Step>
+</Steps>
+
+### Building Xenia
+
+<Steps>
+  <Step title="Clone Repository">
+    ```bash
+    # Clone Xenia Canary
+    git clone https://github.com/xenia-canary/xenia-canary.git
+    cd xenia-canary
+    
+    # Or clone original Xenia (less Linux support)
+    # git clone https://github.com/xenia-project/xenia.git
+    # cd xenia
+    ```
+  </Step>
+  
+  <Step title="Setup Build Environment">
+    ```bash
+    # Make xb script executable
+    chmod +x xb
+    
+    # Run setup
+    ./xb setup
+    ```
+    
+    This will:
+    - Initialize git submodules
+    - Configure the build system
+    - Generate build files with CMake
+  </Step>
+  
+  <Step title="Build Xenia">
+    ```bash
+    # Build debug version
+    ./xb build
+    
+    # Or build release version (recommended for playing games)
+    ./xb build --config=release
+    ```
+    
+    The build process may take 10-30 minutes depending on your system.
+    
+    Built binaries will be in:
+    - **Debug**: `build/bin/Linux/Debug/xenia`
+    - **Release**: `build/bin/Linux/Release/xenia`
+  </Step>
+  
+  <Step title="Run Xenia">
+    ```bash
+    # Run the built executable
+    ./build/bin/Linux/Release/xenia
+    
+    # Or with a game:
+    ./build/bin/Linux/Release/xenia /path/to/game.xex
+    ```
+    
+    <Tip>
+    Create a symlink for easier access:
+    ```bash
+    sudo ln -s $(pwd)/build/bin/Linux/Release/xenia /usr/local/bin/xenia
+    ```
+    </Tip>
+  </Step>
+</Steps>
+
+### Linux Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Clang 19 not found" icon="terminal">
+    If Clang 19 isn't available in your distribution's repositories:
+    
+    ```bash
+    # Add LLVM repository (Ubuntu/Debian)
+    wget https://apt.llvm.org/llvm.sh
+    chmod +x llvm.sh
+    sudo ./llvm.sh 19
+    ```
+  </Accordion>
+  
+  <Accordion title="Vulkan not working" icon="display">
+    Verify Vulkan is properly installed:
+    
+    ```bash
+    # Check for Vulkan devices
+    vulkaninfo --summary
+    
+    # Check ICD loader
+    ls /usr/share/vulkan/icd.d/
+    
+    # Test Vulkan
+    vkcube
+    ```
+    
+    If vkcube doesn't work, Xenia won't work either. Fix your Vulkan installation first.
+  </Accordion>
+  
+  <Accordion title="Build fails with libc++ errors" icon="circle-xmark">
+    Ensure libc++ is properly installed:
+    
+    ```bash
+    sudo apt-get install --reinstall libc++-dev libc++abi-dev
+    ```
+    
+    Or try building with libstdc++ instead (not officially supported):
+    ```bash
+    # Edit build files to use libstdc++ - not recommended
+    ```
+  </Accordion>
+  
+  <Accordion title="GTK errors on launch" icon="window">
+    Install GTK3 development files:
+    
+    ```bash
+    sudo apt-get install libgtk-3-dev
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Post-Installation Setup
+
+### Directory Structure
+
+After first launch, Xenia creates this directory structure:
+
+```
+xenia/
+├── xenia.exe (or xenia)
+├── xenia.config.toml          # Main configuration file
+├── content/                   # Save data and profiles
+│   ├── 00000001/              # Profile data
+│   └── [GAME_TITLE_IDs]/      # Per-game save data
+├── cache/                     # Shader cache
+└── portable.txt               # Makes Xenia portable (optional)
+```
+
+### Configuration File
+
+The `xenia.config.toml` file is created on first launch. Edit it to customize Xenia's behavior:
+
+```toml
+# Graphics Configuration
+[GPU]
+gpu = "vulkan"          # Options: vulkan, d3d12 (Windows only), null
+vsync = true            # Enable V-sync
+
+# CPU Configuration  
+[CPU]
+break_on_unimplemented_instructions = false
+
+# Audio Configuration
+[APU]
+apu = "xaudio2"         # Windows: xaudio2, Linux: sdl
+
+# Storage Paths
+[Storage]
+content_root = "content"   # Save data location
+cache_root = "cache"       # Shader cache location
+```
+
+See the [Configuration Reference](/reference/configuration) for all available options.
+
+### Making Xenia Portable
+
+To make Xenia store all files in its own directory:
+
+1. Create an empty file named `portable.txt` in the Xenia directory
+2. All configuration and save data will be stored relative to the executable
+
+```bash
+# Windows
+type nul > portable.txt
+
+# Linux
+touch portable.txt
+```
+
+## Updating Xenia
+
+### Pre-Built Binaries
+
+<Steps>
+  <Step title="Backup Your Data">
+    Before updating, backup your:
+    - `content/` folder (save data)
+    - `xenia.config.toml` (settings)
+  </Step>
+  
+  <Step title="Download New Version">
+    Download the latest release from the same source you originally used.
+  </Step>
+  
+  <Step title="Replace Executable">
+    Replace the old `xenia.exe` with the new one. Keep your `content/` and config files.
+  </Step>
+</Steps>
+
+### Source Builds
+
+```bash
+# Pull latest changes
+git pull
+
+# Update submodules
+./xb pull
+
+# Rebuild
+./xb build --config=release
+```
+
+<Note>
+The `xb pull` command automatically updates submodules, rebases your changes, and runs premake.
+</Note>
+
+## Verifying Installation
+
+### Quick Test
+
+To verify Xenia is working correctly:
+
+<Steps>
+  <Step title="Launch Xenia">
+    Start Xenia without any game to ensure it launches properly.
+  </Step>
+  
+  <Step title="Check Graphics Backend">
+    Look at the window title or log output to verify your graphics backend initialized:
+    - `[Vulkan]` or `[D3D12]` should appear
+  </Step>
+  
+  <Step title="Load a Test Game">
+    Try loading a known-working game from the [compatibility list](https://github.com/xenia-canary/game-compatibility/issues).
+  </Step>
+</Steps>
+
+### Enable Logging
+
+For troubleshooting, enable console logging:
+
+```bash
+# Windows
+xenia.exe --log_file=stdout game.xex
+
+# Linux
+./xenia --log_file=stdout game.xex
+```
+
+This will show detailed information about what Xenia is doing.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Quick guide to running your first game
+  </Card>
+  
+  <Card title="Configuration" icon="sliders" href="/reference/configuration">
+    Detailed configuration options
+  </Card>
+  
+  <Card title="Command-Line Reference" icon="terminal" href="/reference/command-line">
+    All command-line flags and options
+  </Card>
+  
+  <Card title="Compatibility List" icon="list-check" href="/reference/compatibility">
+    Check which games work
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you encounter issues during installation:
+
+1. Check the [FAQ](/reference/faq) for common problems
+2. Search existing [GitHub issues](https://github.com/xenia-canary/xenia-canary/issues)
+3. Join the [Discord community](https://discord.gg/Q9mxZf9) for help
+4. Report bugs with detailed logs and system information
+
+<Warning>
+**Remember**: Always ensure you have legal copies of any games you use with Xenia. Do not ask for or share copyrighted content.
+</Warning>

@@ -1,0 +1,453 @@
+---
+title: Frequently Asked Questions
+description: Common questions about Xenia Xbox 360 emulator
+---
+
+Answers to frequently asked questions about Xenia, the Xbox 360 emulator.
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is Xenia?">
+    Xenia is an experimental Xbox 360 emulator for Windows and Linux. It aims to emulate the Xbox 360 hardware and run commercial games, homebrew software, and development tools.
+    
+    The project is open source and focuses on research and education about modern console emulation techniques.
+  </Accordion>
+
+  <Accordion title="What is Xenia Canary?">
+    Xenia Canary is an experimental fork of the main Xenia emulator. It includes additional features, experimental changes, and potentially less stable code compared to the main branch.
+    
+    For more information, see the [Xenia Canary wiki](https://github.com/xenia-canary/xenia-canary/wiki).
+  </Accordion>
+
+  <Accordion title="Is Xenia legal?">
+    Yes. Xenia is a legal research and educational project. All information used in development is obtained through:
+    - Reverse engineering of legally purchased devices and games
+    - Publicly available information
+    
+    **However:** Using Xenia to play games you don't own or obtaining game files through illegal means is not legal.
+  </Accordion>
+
+  <Accordion title="Where can I get help?">
+    - **Discord:** Join the [Xenia Discord](https://discord.gg/Q9mxZf9) for community support (stay on topic in #dev)
+    - **FAQ:** Check the [FAQ page](https://github.com/xenia-canary/xenia-canary/wiki/FAQ) on the wiki first
+    - **Issues:** Search [GitHub issues](https://github.com/xenia-canary/xenia-canary/issues) for similar problems
+    
+    Remember that developers have jobs and lives - don't expect instant answers. Lurking is encouraged!
+  </Accordion>
+</AccordionGroup>
+
+## System Requirements
+
+<AccordionGroup>
+  <Accordion title="What are the system requirements?">
+    **Minimum Requirements:**
+    - Modern quad-core CPU (Intel i5/AMD Ryzen 5 or better)
+    - DirectX 12 or Vulkan capable GPU
+    - 8 GB RAM
+    - Windows 10 64-bit or Linux 64-bit
+    
+    **Recommended:**
+    - High-performance CPU with strong single-thread performance
+    - Dedicated GPU (NVIDIA GTX 1060 / AMD RX 580 or better)
+    - 16 GB RAM or more
+    - SSD for faster loading times
+    
+    Performance varies significantly by game. Some titles require very powerful hardware to run at full speed.
+  </Accordion>
+
+  <Accordion title="Can I run Xenia on a laptop?">
+    It depends on the laptop's specifications. Gaming laptops with dedicated GPUs and modern CPUs can run many Xbox 360 games through Xenia.
+    
+    Ultrabooks and budget laptops with integrated graphics will struggle with most games. Check your laptop's specifications against the system requirements.
+  </Accordion>
+
+  <Accordion title="Does Xenia support Linux?">
+    Yes! Xenia has Linux support, though it may be less mature than the Windows version. 
+    
+    If you're skilled with Linux, consider [helping with the Linux port](https://github.com/xenia-canary/xenia-canary/labels/platform-linux).
+    
+    See the [Linux building guide](/building/linux) for setup instructions.
+  </Accordion>
+
+  <Accordion title="Does Xenia support macOS?">
+    No. Xenia does not currently support macOS and there are no plans for macOS support at this time.
+  </Accordion>
+</AccordionGroup>
+
+## Game Compatibility
+
+<AccordionGroup>
+  <Accordion title="How many games work?">
+    Xenia can boot hundreds of Xbox 360 titles, with varying degrees of playability:
+    - Some games are fully playable from start to finish
+    - Many games have graphics glitches or performance issues
+    - Some games crash or don't boot at all
+    
+    Check the [compatibility list](https://github.com/xenia-canary/game-compatibility/issues) for specific game status.
+  </Accordion>
+
+  <Accordion title="Why doesn't my game work?">
+    Many factors can prevent games from working:
+    - **Unimplemented features:** The game uses Xbox 360 features not yet emulated
+    - **Bugs:** Emulation bugs that affect this specific game
+    - **Hardware:** Your PC doesn't meet the performance requirements
+    - **Corrupt files:** The game files are incomplete or damaged
+    
+    Try:
+    1. Using the latest Xenia Canary build
+    2. Checking the compatibility list for known issues
+    3. Adjusting configuration settings
+    4. Reporting the issue if it's not already known
+  </Accordion>
+
+  <Accordion title="Can I play Xbox Live games?">
+    No. Online multiplayer and Xbox Live features are not supported. Xenia focuses on single-player game emulation.
+    
+    Some games may work in offline/single-player modes even if they have online features.
+  </Accordion>
+
+  <Accordion title="Do Kinect games work?">
+    No. Kinect sensor emulation is not implemented, so games requiring Kinect will not work.
+  </Accordion>
+
+  <Accordion title="Can I use game saves from a real Xbox 360?">
+    This depends on the game. Some game saves may work if transferred correctly, but compatibility is not guaranteed.
+    
+    Save file locations and formats vary by game.
+  </Accordion>
+</AccordionGroup>
+
+## Performance Issues
+
+<AccordionGroup>
+  <Accordion title="Why is my game running slowly?">
+    Emulation is CPU-intensive. Common causes of slowdown:
+    
+    **CPU bottleneck:**
+    - Xbox 360 emulation requires significant CPU power
+    - Single-thread performance is critical
+    - Some games are more demanding than others
+    
+    **Solutions:**
+    - Close background applications
+    - Disable vsync with `--vsync=false` to test maximum speed
+    - Ensure your CPU isn't thermal throttling
+    - Try different configuration settings
+    
+    If your hardware doesn't meet recommended specs, some games may not reach full speed.
+  </Accordion>
+
+  <Accordion title="How can I improve performance?">
+    **Configuration tweaks:**
+    ```bash
+    # Disable vsync for maximum speed
+    xenia --vsync=false game.xex
+    
+    # Unlimited framerate
+    xenia --framerate_limit=0 game.xex
+    ```
+    
+    **System optimization:**
+    - Close unnecessary background applications
+    - Ensure GPU drivers are up to date
+    - Run Xenia with high CPU priority
+    - Disable Windows Game Mode (sometimes helps)
+    
+    **Hardware:**
+    - Overclock CPU if possible (at your own risk)
+    - Upgrade to a CPU with better single-thread performance
+    - Ensure adequate cooling for sustained performance
+  </Accordion>
+
+  <Accordion title="What's the difference between vsync on and off?">
+    **Vsync Enabled** (`--vsync=true`, default):
+    - Limits rendering to 60 FPS (matching Xbox 360)
+    - Reduces screen tearing
+    - May add input latency
+    - Recommended for most games
+    
+    **Vsync Disabled** (`--vsync=false`):
+    - Renders as fast as possible
+    - Useful for testing maximum performance
+    - May cause screen tearing
+    - Can help identify CPU/GPU bottlenecks
+  </Accordion>
+
+  <Accordion title="Why do I get stuttering during gameplay?">
+    Common causes:
+    
+    **Shader compilation:**
+    - First-time shader compilation causes stuttering
+    - Stuttering decreases as more shaders are cached
+    - This is a known limitation of emulation
+    
+    **CPU/GPU spikes:**
+    - Background processes interfering
+    - Thermal throttling
+    - Insufficient hardware
+    
+    **Solutions:**
+    - Play through stuttering sections once to build shader cache
+    - Monitor CPU/GPU temperatures
+    - Close background applications
+    - Ensure adequate system cooling
+  </Accordion>
+</AccordionGroup>
+
+## Graphics Issues
+
+<AccordionGroup>
+  <Accordion title="Why do graphics look wrong?">
+    Graphics issues are common in emulation:
+    
+    **Common problems:**
+    - Missing textures or effects
+    - Incorrect colors or lighting
+    - Flickering or z-fighting
+    - UI elements not displaying correctly
+    
+    **Potential fixes:**
+    - Try different GPU configuration options
+    - Toggle `half_pixel_offset` setting
+    - Update graphics drivers
+    - Check compatibility list for game-specific settings
+    
+    Many graphics issues are due to emulation inaccuracies and require code fixes.
+  </Accordion>
+
+  <Accordion title="Can I increase the rendering resolution?">
+    Xenia renders at the game's native resolution. Resolution scaling features are not currently implemented.
+    
+    Some UI elements and rendering techniques don't scale well, making this a complex feature to add.
+  </Accordion>
+
+  <Accordion title="Why is the screen black but I hear audio?">
+    This usually indicates:
+    - Graphics driver issues
+    - GPU compatibility problems
+    - Game-specific rendering bugs
+    
+    Try:
+    1. Updating graphics drivers
+    2. Using different GPU API (DirectX 12 vs Vulkan)
+    3. Checking if your GPU supports required features
+    4. Looking for similar reports in the compatibility list
+  </Accordion>
+</AccordionGroup>
+
+## Configuration and Setup
+
+<AccordionGroup>
+  <Accordion title="Where are configuration files stored?">
+    By default, Xenia stores configuration in:
+    - `xenia-canary.config.toml` - Main configuration file
+    - `config/` subdirectory - Per-game configurations (named by Title ID)
+    
+    You can specify a custom config location with `--config` command-line argument.
+    
+    See the [Configuration reference](/reference/configuration) for details.
+  </Accordion>
+
+  <Accordion title="How do I use command-line arguments?">
+    Command-line arguments override config file settings:
+    
+    ```bash
+    xenia [options] <game_path>
+    ```
+    
+    Examples:
+    ```bash
+    # Disable vsync
+    xenia --vsync=false game.xex
+    
+    # Dump shaders for debugging
+    xenia --dump_shaders=output/ game.xex
+    
+    # Run headless for testing
+    xenia --headless game.xex
+    ```
+    
+    See the [Command-Line reference](/reference/command-line) for all options.
+  </Accordion>
+
+  <Accordion title="What file formats does Xenia support?">
+    Xenia can load:
+    - `.xex` - Xbox 360 executable files
+    - `.iso` - Disc images (ISO format)
+    - Game directories containing default.xex
+    
+    Make sure game files are not corrupted and come from legitimate sources (your own Xbox 360 discs).
+  </Accordion>
+
+  <Accordion title="How do I extract games from Xbox 360 discs?">
+    You'll need to use your Xbox 360 console or a compatible PC drive to extract game files.
+    
+    **Important:** Only extract games you legally own. Piracy is not supported or encouraged.
+    
+    Tools and methods vary - search online for current extraction guides for your specific situation.
+  </Accordion>
+</AccordionGroup>
+
+## Development and Contributing
+
+<AccordionGroup>
+  <Accordion title="How can I contribute to Xenia?">
+    There are many ways to help:
+    
+    **Code contributions:**
+    - Fix bugs and implement features
+    - See [Contributing guidelines](.github/CONTRIBUTING.md)
+    - Follow the [style guide](/development/style-guide)
+    - Check [good first issues](https://github.com/xenia-canary/xenia-canary/labels/good%20first%20issue)
+    
+    **Non-code contributions:**
+    - Test games and report compatibility
+    - Update documentation
+    - Help other users on Discord
+    - Report detailed bug reports
+    
+    Advanced C++ knowledge is helpful for code contributions.
+  </Accordion>
+
+  <Accordion title="How do I build Xenia from source?">
+    See the [Building documentation](/building/setup) for complete instructions.
+    
+    Quick overview:
+    1. Install prerequisites (Python, Visual Studio/GCC)
+    2. Clone the repository
+    3. Run build script: `xb build`
+    
+    Platform-specific guides:
+    - [Windows building guide](/building/windows)
+    - [Linux building guide](/building/linux)
+  </Accordion>
+
+  <Accordion title="Can I help with specific areas?">
+    Yes! Check the issue tracker for areas needing help:
+    - [Good first issues](https://github.com/xenia-canary/xenia-canary/labels/good%20first%20issue)
+    - [Linux porting help needed](https://github.com/xenia-canary/xenia-canary/labels/platform-linux)
+    - [Compatibility issues](https://github.com/xenia-canary/xenia-canary/labels/compat)
+    
+    Ask on Discord in `#dev` before starting major work to coordinate with other developers.
+  </Accordion>
+
+  <Accordion title="Why was my question/issue closed?">
+    Common reasons:
+    - Question already answered in FAQ or documentation
+    - Issue is a duplicate of an existing report
+    - Not enough information provided
+    - Issue is off-topic or not related to emulation
+    - Discussing illegal activities (results in ban)
+    
+    Please read the FAQ and search existing issues before posting.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Xenia won't start or crashes immediately">
+    **Check prerequisites:**
+    - Windows 10 64-bit or compatible Linux distribution
+    - DirectX 12 or Vulkan capable GPU
+    - Latest graphics drivers installed
+    - Visual C++ Redistributables installed (Windows)
+    
+    **Try:**
+    1. Run as administrator (Windows)
+    2. Disable antivirus temporarily
+    3. Check event logs for error details
+    4. Verify GPU supports required features
+    5. Try different graphics API if available
+  </Accordion>
+
+  <Accordion title="Where are log files?">
+    Xenia creates log files in the same directory as the executable.
+    
+    Log files contain important diagnostic information for troubleshooting. Include relevant log sections when reporting issues.
+    
+    You can also specify custom log locations with command-line arguments.
+  </Accordion>
+
+  <Accordion title="How do I report a bug?">
+    Good bug reports include:
+    
+    1. **Xenia version:** Specific build/commit hash
+    2. **Game information:** Title and Title ID
+    3. **System specs:** CPU, GPU, RAM, OS
+    4. **Reproduction steps:** Detailed steps to reproduce
+    5. **Logs:** Relevant log file sections
+    6. **Screenshots:** Visual evidence of the issue
+    7. **Configuration:** Any non-default settings
+    
+    Search existing issues first to avoid duplicates.
+  </Accordion>
+
+  <Accordion title="Antivirus is flagging Xenia">
+    Some antivirus software may flag Xenia as suspicious because:
+    - It uses JIT compilation
+    - It modifies memory and code at runtime
+    - It's not digitally signed
+    
+    These are normal emulator behaviors, not malicious activity. 
+    
+    **If you trust the source:**
+    - Add exception in antivirus software
+    - Download only from official sources (GitHub releases)
+    - Verify file checksums if provided
+    
+    Never disable antivirus completely - only add specific exceptions.
+  </Accordion>
+</AccordionGroup>
+
+## Community and Support
+
+<AccordionGroup>
+  <Accordion title="Where is the community?">
+    - **Discord:** [https://discord.gg/Q9mxZf9](https://discord.gg/Q9mxZf9) - Active community chat
+    - **GitHub:** [https://github.com/xenia-canary/xenia-canary](https://github.com/xenia-canary/xenia-canary) - Source code and issues
+    - **Wiki:** [https://github.com/xenia-canary/xenia-canary/wiki](https://github.com/xenia-canary/xenia-canary/wiki) - Documentation
+    
+    Join #dev on Discord for development discussion, but stay on topic!
+  </Accordion>
+
+  <Accordion title="What activities are prohibited?">
+    **Discussion of illegal activities will result in a ban:**
+    - Piracy or where to download games illegally
+    - Circumventing game protection illegally
+    - Sharing copyrighted content
+    
+    Xenia is for research and education. Only use it with games you legally own.
+  </Accordion>
+
+  <Accordion title="Why don't developers respond immediately?">
+    Remember:
+    - Developers have jobs, lives, and other commitments
+    - This is an open-source project maintained in spare time
+    - Many questions are answered in documentation
+    - Search before asking - your question may already be answered
+    
+    Lurking and reading documentation is encouraged! Don't expect instant support.
+  </Accordion>
+</AccordionGroup>
+
+## Additional Resources
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Get started with Xenia quickly
+  </Card>
+  
+  <Card title="Configuration Reference" icon="gear" href="/reference/configuration">
+    Complete configuration options
+  </Card>
+  
+  <Card title="Compatibility List" icon="gamepad" href="https://github.com/xenia-canary/game-compatibility/issues">
+    Check game compatibility status
+  </Card>
+  
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/Q9mxZf9">
+    Join the community discussion
+  </Card>
+</CardGroup>

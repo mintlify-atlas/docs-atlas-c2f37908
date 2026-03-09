@@ -1,0 +1,258 @@
+---
+title: Game Compatibility
+description: Understanding Xbox 360 game compatibility in Xenia
+---
+
+Xenia is an experimental Xbox 360 emulator capable of running many commercial and homebrew games. Compatibility varies widely depending on the game and the specific features it uses.
+
+## Compatibility Status
+
+### Official Compatibility List
+
+The Xenia Canary project maintains an active compatibility database where users can report their experiences with different games:
+
+<Card title="Game Compatibility List" icon="gamepad" href="https://github.com/xenia-canary/game-compatibility/issues">
+  View the official game compatibility tracker with user reports, screenshots, and known issues for hundreds of titles.
+</Card>
+
+### Contributing to Compatibility Data
+
+If you've tested a game, please contribute your findings! Follow the [existing conventions](https://github.com/xenia-canary/game-compatibility/blob/canary/README.md) when submitting:
+
+- Include the game title and Title ID
+- Report your test results (playable, boots, crashes, etc.)
+- Add screenshots if possible
+- Note any specific issues or workarounds
+- List your configuration if non-default settings were needed
+
+## Compatibility Categories
+
+Games generally fall into these categories:
+
+### Playable
+
+Games that can be completed from start to finish with minor or no issues. May have:
+- Minor graphical glitches
+- Occasional frame drops
+- Non-critical bugs that don't prevent completion
+
+### Ingame
+
+Games that boot and are playable to some extent but have significant issues:
+- Major graphical problems
+- Performance issues
+- Crashes during gameplay
+- Missing features that impact gameplay
+
+### Menus
+
+Games that boot to menus but don't proceed further:
+- Main menu displays correctly
+- Game crashes when starting gameplay
+- Severe rendering issues in-game
+
+### Intro/Logos
+
+Games that display intro videos or logos but crash before reaching menus.
+
+### Nothing
+
+Games that don't boot at all or immediately crash.
+
+## Factors Affecting Compatibility
+
+### Hardware Requirements
+
+Your PC hardware significantly impacts compatibility:
+
+<AccordionGroup>
+  <Accordion title="CPU Requirements">
+    **Minimum:** Modern quad-core CPU (Intel i5/AMD Ryzen 5 or better)
+    
+    **Recommended:** High-performance CPU with strong single-thread performance
+    
+    Xenia relies heavily on CPU performance for:
+    - PowerPC instruction translation
+    - JIT compilation
+    - Xbox 360 CPU emulation
+    
+    Games with intensive CPU usage may require powerful processors to run at full speed.
+  </Accordion>
+
+  <Accordion title="GPU Requirements">
+    **Minimum:** DirectX 12 or Vulkan capable GPU
+    
+    **Recommended:** Modern dedicated GPU (NVIDIA GTX 1060 / AMD RX 580 or better)
+    
+    GPU factors:
+    - Shader compilation performance
+    - Texture and render target memory
+    - Support for required graphics API features
+    - Driver quality and compatibility
+  </Accordion>
+
+  <Accordion title="Memory Requirements">
+    **Minimum:** 8 GB RAM
+    
+    **Recommended:** 16 GB RAM or more
+    
+    The Xbox 360 had 512 MB of shared memory, but emulation overhead can require significantly more system RAM.
+  </Accordion>
+</AccordionGroup>
+
+### Emulation Accuracy
+
+Several emulation aspects affect compatibility:
+
+**CPU Emulation:**
+- PowerPC instruction translation accuracy
+- Timing and synchronization
+- VMX128 vector extensions
+- Cache behavior simulation
+
+**GPU Emulation:**
+- Xenos shader translation
+- EDRAM simulation
+- Render target formats
+- Texture sampling and filtering
+- Resolve operations
+
+**Kernel Emulation:**
+- Xbox 360 system calls
+- Threading and synchronization
+- File system access
+- Achievement and profile handling
+
+**APU Emulation:**
+- Audio processing
+- XMA audio decoding
+- 3D audio effects
+
+### Game-Specific Features
+
+Some Xbox 360 features are difficult to emulate:
+
+<Card title="Challenging Features" icon="exclamation-triangle">
+  - Kinect sensor input
+  - Network/Xbox Live functionality  
+  - Some copy protection schemes
+  - Avatar system integration
+  - Specific middleware libraries
+  - Custom audio codecs
+</Card>
+
+### Configuration Impact
+
+Your Xenia configuration can affect compatibility:
+
+**Critical Settings:**
+- `--pvr` value may affect games that check processor version
+- `--gpu_allow_invalid_fetch_constants` helps some games but may break others
+- `--half_pixel_offset` fixes some games but may blur UI in others
+
+**Per-Game Configs:**
+
+Many games require specific settings to work correctly. Check the compatibility list for recommended configurations for specific titles.
+
+## Improving Compatibility
+
+### Try Different Settings
+
+If a game doesn't work well:
+
+1. **Adjust GPU settings:**
+   - Toggle `vsync`
+   - Try different `pvr` values
+   - Modify `gpu_allow_invalid_fetch_constants`
+   - Adjust `half_pixel_offset`
+
+2. **Enable debugging features:**
+   - Use `--trace_gpu_stream` to capture rendering issues
+   - Enable `--dump_shaders` to analyze shader problems
+   - Check logs for error messages
+
+3. **Update Xenia:**
+   - Use the latest Xenia Canary build
+   - Check if your issue is already fixed in recent commits
+
+### Report Issues
+
+If you encounter problems:
+
+1. Check the [compatibility list](https://github.com/xenia-canary/game-compatibility/issues) first
+2. Search existing issues to avoid duplicates
+3. Report with detailed information:
+   - Exact Xenia version/commit
+   - Game title and Title ID
+   - Steps to reproduce
+   - Log files and screenshots
+   - System specifications
+
+### Known Limitations
+
+<Warning>
+  Xenia is in active development. Some features are not yet implemented:
+  - Online multiplayer is not supported
+  - Kinect games do not work
+  - Some arcade titles have issues
+  - DLC and title updates may have problems
+</Warning>
+
+## Compatibility Progress
+
+Xenia compatibility improves continuously thanks to:
+
+- Active development by the core team
+- Community contributions and testing
+- Better understanding of Xbox 360 hardware
+- Improved emulation accuracy
+- Bug fixes and optimizations
+
+Check the [GitHub repository](https://github.com/xenia-canary/xenia-canary) for the latest development progress.
+
+## Testing Guidelines
+
+When testing games for compatibility:
+
+### Before Testing
+
+- Use the latest Xenia Canary build
+- Start with default configuration
+- Ensure game files are complete and not corrupted
+- Check if the game is already listed in the compatibility database
+
+### During Testing
+
+- Test beyond the main menu (many games crash after starting)
+- Try different game modes if available
+- Note specific issues with timestamps or locations
+- Take screenshots of problems
+- Save log files for analysis
+
+### Reporting Results
+
+- Be specific about what works and what doesn't
+- Include version information (Xenia build, game version)
+- Note any configuration changes from default
+- Attach relevant screenshots and logs
+- Update your report if issues are fixed in newer builds
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Compatibility Database" icon="database" href="https://github.com/xenia-canary/game-compatibility/issues">
+    Search and contribute to the official game compatibility list
+  </Card>
+  
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/Q9mxZf9">
+    Discuss compatibility issues and get help from the community
+  </Card>
+  
+  <Card title="GitHub Issues" icon="github" href="https://github.com/xenia-canary/xenia-canary/issues">
+    Report bugs and emulation issues
+  </Card>
+  
+  <Card title="Wiki" icon="book" href="https://github.com/xenia-canary/xenia-canary/wiki">
+    Additional documentation and guides
+  </Card>
+</CardGroup>

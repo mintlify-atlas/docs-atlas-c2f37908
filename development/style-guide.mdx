@@ -1,0 +1,207 @@
+---
+title: Code Style Guide
+description: C++ and Android code formatting standards for the Xenia project
+---
+
+The Xenia codebase follows strict formatting rules to maintain consistency and readability. All code must adhere to these standards before being accepted.
+
+## Quick Summary
+
+The style guide can be summed up as: **clang-format with the Google style set**.
+
+In addition, the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) is followed, and cpplint is the source of truth. When in doubt, defer to what existing code in the project does.
+
+<Tip>
+**Golden Rule**: Run `xb format` before you commit and you won't have problems!
+</Tip>
+
+## C++ Style Rules
+
+### Base Rules
+
+- **80 column line length maximum**
+- **LF (Unix-style) line endings** - no CRLF
+- **2-space soft tabs** - no TAB characters!
+- **[Google Style Guide](https://google.github.io/styleguide/cppguide.html)** for naming, casing, etc.
+- **Sort includes** according to the [style guide rules](https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes)
+- **Comments are properly punctuated** - capitalization, periods, etc.
+- **TODO comments must be attributed** like `// TODO(yourgithubname): foo.`
+
+<Warning>
+Code that breaks formatting rules will not be accepted. If you don't follow the formatting, no one else can use clang-format on the code without touching all your lines.
+</Warning>
+
+### Why These Rules?
+
+To quote the [Google Style Guide](https://google.github.io/styleguide/cppguide.html):
+
+> One way in which we keep the code base manageable is by enforcing consistency. It is very important that any programmer be able to look at another's code and quickly understand it. Maintaining a uniform style and following conventions means that we can more easily use "pattern-matching" to infer what various symbols are and what invariants are true about them.
+
+## Buildbot Verification
+
+The buildbot runs automated style checks:
+- `xb lint --all` on the master branch
+- `xb lint --origin` on pull requests
+
+<Tip>
+Run `xb format` before each local commit to stay consistently clean. If you forget, run `xb format --origin` and rebase your changes. Avoid creating a "whoops" commit just for formatting fixes.
+</Tip>
+
+### LLVM Version
+
+The buildbot runs **LLVM 3.8.0**. If you notice style differences between your local lint/format and the buildbot, ensure you're running that version.
+
+## Tools
+
+### clang-format
+
+clang-format with the Google style is used to format all files. We recommend wiring it up to your editor so you don't have to think about tabs, wrapping, and formatting.
+
+#### Command Line
+
+To use `xb format`, you need `clang-format` on your PATH.
+
+**Windows**: Install an LLVM binary package from the [LLVM downloads page](https://llvm.org/releases/download.html). If you install to the default location, `xb format` will find it automatically even without adding LLVM to your PATH.
+
+**Linux**: Install via your package manager:
+
+```bash
+sudo apt-get install clang-format-19
+```
+
+#### Visual Studio
+
+1. Install the official [experimental Visual Studio plugin](https://llvm.org/builds/)
+2. Go to **Tools → Options → LLVM/Clang → ClangFormat**
+3. Set **Style** to **Google**
+4. Use **Ctrl+R, Ctrl+F** to trigger formatting
+
+<Note>
+The plugin only formats at the cursor by default. Select the entire document and invoke the formatter to format everything.
+</Note>
+
+#### Xcode
+
+1. Install [Alcatraz](https://github.com/alcatraz/Alcatraz)
+2. Get the [ClangFormat](https://github.com/travisjeffery/ClangFormat-Xcode) package
+3. Set it to use the Google style
+4. Enable format on save
+
+Never think about tabs or line feeds again!
+
+### cpplint
+
+The linter will eventually run as a git commit hook and on CI. For now, use it manually to check your code.
+
+<Note>
+Future plans include a script and editor plugins to make linting easier.
+</Note>
+
+## Android Style Guide
+
+Android Java, Groovy code, and XML files currently don't have automatic format verification during builds. However, stick to the [AOSP Java Code Style Rules](https://source.android.com/setup/contribute/code-style).
+
+### Java Code Style
+
+The formatting rules match the **default Android Studio settings**. They diverge from C++ code style in areas like indentation width and maximum line length.
+
+**Key rules:**
+
+- **100 character line limit**
+- **4-space indentation** for blocks
+- **8-space indentation** for subexpressions and wrapped arguments
+- Follow the [rectangle rule](https://github.com/google/google-java-format/wiki/The-Rectangle-Rule) for expression hierarchy
+
+#### Long Lines
+
+If an assignment doesn't fit in 100 characters:
+```java
+// Move right-hand side to separate line with 8-space indentation
+SomeType variable =
+        someVeryLongMethodCall(arg1, arg2, arg3);
+```
+
+If a method declaration or call is too long:
+```java
+// Start entire argument list on new line with 8-space indentation
+public void someMethod(
+        String firstArgument,
+        int secondArgument,
+        boolean thirdArgument) {
+    // method body
+}
+```
+
+### XML Style
+
+If a line exceeds 100 characters or has multiple attributes:
+
+```xml
+<!-- Each attribute on separate line with 4-space indentation -->
+<Element xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/example" />
+```
+
+<Note>
+The first `xmlns` should stay on the same line as the element name.
+</Note>
+
+### Groovy Style
+
+- **4-space indentation** for blocks
+- **8-space indentation** for splitting arguments
+- **Single quotes** for string literals (unless using string interpolation)
+
+### Android Studio Formatting
+
+Use **Code → Reformat Code** and **Code → Reformat File** in Android Studio for automatic formatting.
+
+<Warning>
+Unlike clang-format which is strict, Android Studio preserves many style choices. Approximate the final style manually instead of relying entirely on automatic formatting.
+</Warning>
+
+Use **Code → Rearrange Code** to maintain consistent structure in Java class declarations.
+
+## Naming Conventions
+
+Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for all naming:
+
+- **Classes/Structs**: `PascalCase`
+- **Functions**: `PascalCase`
+- **Variables**: `snake_case`
+- **Constants**: `kConstantName`
+- **Member variables**: `snake_case_` (with trailing underscore)
+- **Namespaces**: `lowercase`
+
+## Comments
+
+All comments must be:
+- **Properly capitalized**
+- **Properly punctuated** (periods, commas, etc.)
+- **Clear and descriptive**
+
+```cpp
+// Good: This function calculates the vertex shader output.
+void CalculateVertexOutput();
+
+// Bad: calculates vertex shader output
+void CalculateVertexOutput();
+```
+
+### TODO Comments
+
+TODO comments must include your GitHub username:
+
+```cpp
+// TODO(yourgithubname): Implement pixel shader cache invalidation.
+```
+
+## Summary
+
+The goal of these style rules is to maintain consistency across the codebase, making it easier for all contributors to read and understand each other's code.
+
+<Tip>
+Remember: **Run `xb format` before every commit!** This single command will handle most formatting requirements automatically.
+</Tip>
