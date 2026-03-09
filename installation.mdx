@@ -116,7 +116,7 @@ A 64-bit system is **required** - Xenia cannot run on 32-bit systems.
   
   <Step title="First Run">
     1. Navigate to your Xenia folder
-    2. Double-click `xenia.exe` or `xenia_canary.exe`
+    2. Double-click `xenia_canary.exe` or `xenia_canary.exe`
     3. Xenia will create configuration files on first launch
     4. The main window should appear
     
@@ -194,8 +194,8 @@ For developers or those who want the latest changes:
     </CodeGroup>
     
     The built executable will be in:
-    - **Debug**: `build/bin/Windows/Debug/xenia.exe`
-    - **Release**: `build/bin/Windows/Release/xenia.exe`
+    - **Debug**: `build/bin/Windows/Debug/xenia_canary.exe`
+    - **Release**: `build/bin/Windows/Release/xenia_canary.exe`
     
     <Tip>
     Use Release builds for playing games. Debug builds are significantly slower and meant for development.
@@ -456,8 +456,8 @@ After first launch, Xenia creates this directory structure:
 
 ```
 xenia/
-├── xenia.exe (or xenia)
-├── xenia.config.toml          # Main configuration file
+├── xenia_canary.exe (or xenia)
+├── xenia-canary.config.toml          # Main configuration file
 ├── content/                   # Save data and profiles
 │   ├── 00000001/              # Profile data
 │   └── [GAME_TITLE_IDs]/      # Per-game save data
@@ -467,7 +467,7 @@ xenia/
 
 ### Configuration File
 
-The `xenia.config.toml` file is created on first launch. Edit it to customize Xenia's behavior:
+The `xenia-canary.config.toml` file is created on first launch. Edit it to customize Xenia's behavior:
 
 ```toml
 # Graphics Configuration
@@ -514,7 +514,7 @@ touch portable.txt
   <Step title="Backup Your Data">
     Before updating, backup your:
     - `content/` folder (save data)
-    - `xenia.config.toml` (settings)
+    - `xenia-canary.config.toml` (settings)
   </Step>
   
   <Step title="Download New Version">
@@ -522,7 +522,7 @@ touch portable.txt
   </Step>
   
   <Step title="Replace Executable">
-    Replace the old `xenia.exe` with the new one. Keep your `content/` and config files.
+    Replace the old `xenia_canary.exe` with the new one. Keep your `content/` and config files.
   </Step>
 </Steps>
 
@@ -570,7 +570,7 @@ For troubleshooting, enable console logging:
 
 ```bash
 # Windows
-xenia.exe --log_file=stdout game.xex
+xenia_canary.exe --log_file=stdout game.xex
 
 # Linux
 ./xenia --log_file=stdout game.xex

@@ -55,7 +55,7 @@ The basic trace viewer workflow consists of the following steps:
 Before capturing frames, you must specify a path prefix for trace files:
 
 ```bash
-xenia.exe --trace_gpu_prefix=path/file_prefix_ game.xex
+xenia_canary.exe --trace_gpu_prefix=path/file_prefix_ game.xex
 ```
 
 All captured trace files will be saved with names based on the specified prefix plus a randomized suffix.
@@ -73,7 +73,7 @@ The frame capture includes all GPU commands up until a `VdSwap` call (the presen
 **Example:**
 
 ```bash
-xenia.exe --trace_gpu_prefix=traces/frame_ game.xex
+xenia_canary.exe --trace_gpu_prefix=traces/frame_ game.xex
 ```
 
 Press F4 during gameplay to capture a frame. The file might be saved as `traces/frame_a3c2f1.trace`.
@@ -83,7 +83,7 @@ Press F4 during gameplay to capture a frame. The file might be saved as `traces/
 For issues that involve multiple frames or animation problems, you can capture a stream of frames:
 
 ```bash
-xenia.exe --trace_gpu_prefix=traces/stream_ --trace_gpu_stream game.xex
+xenia_canary.exe --trace_gpu_prefix=traces/stream_ --trace_gpu_stream game.xex
 ```
 
 With `--trace_gpu_stream` enabled, Xenia will write all rendered frames to a trace file, allowing you to seek through them in the trace viewer.
@@ -129,7 +129,7 @@ The trace viewer significantly speeds up graphics debugging:
 
 ```bash
 # Initial capture
-xenia.exe --trace_gpu_prefix=debug/issue_ game.xex
+xenia_canary.exe --trace_gpu_prefix=debug/issue_ game.xex
 # Press F4 when the issue appears
 
 # Debug in Visual Studio

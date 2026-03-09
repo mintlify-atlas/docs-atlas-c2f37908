@@ -52,9 +52,9 @@ Xenia is intended for research and education. You must own the games you intend 
   </Step>
 
   <Step title="First Launch">
-    **Windows**: Double-click `xenia.exe` or `xenia_canary.exe`
+    **Windows**: Double-click `xenia_canary.exe`
     
-    **Linux**: Run `./build/bin/Linux/Debug/xenia` from the terminal
+    **Linux**: Run `./build/bin/Linux/Debug/xenia_canary` from the terminal
     
     On first launch, Xenia will create a configuration file and display the main window.
   </Step>
@@ -62,13 +62,13 @@ Xenia is intended for research and education. You must own the games you intend 
   <Step title="Configure Graphics Backend">
     Xenia supports multiple graphics backends. Create or edit your config file:
     
-    **Windows**: `xenia.config.toml` (in the same directory as the executable)
+    **Windows**: `xenia-canary.config.toml` (in the same directory as the executable)
     
-    **Linux**: `~/.config/xenia/xenia.config.toml`
+    **Linux**: `~/.config/xenia/xenia-canary.config.toml`
     
     Set your preferred GPU backend:
     
-    ```toml xenia.config.toml
+    ```toml xenia-canary.config.toml
     [GPU]
     gpu = "vulkan"  # or "d3d12" on Windows
     ```
@@ -93,7 +93,7 @@ Xenia is intended for research and education. You must own the games you intend 
       </Tab>
       <Tab title="Command Line">
         ```bash Windows
-        xenia.exe "C:\path\to\game\default.xex"
+        xenia_canary.exe "C:\path\to\game\default.xex"
         ```
         
         ```bash Linux
@@ -124,7 +124,7 @@ Xenia is intended for research and education. You must own the games you intend 
     | LT/RT | 1/3 | LT/RT |
     
     <Tip>
-    Most Xbox 360 controllers work natively with Xenia. For other controllers, configure them in `xenia.config.toml`.
+    Most Xbox 360 controllers work natively with Xenia. For other controllers, configure them in `xenia-canary.config.toml`.
     </Tip>
   </Step>
 </Steps>
@@ -155,13 +155,13 @@ Xenia is intended for research and education. You must own the games you intend 
   
   <Accordion title="No sound or audio issues">
     - Check that your audio device is properly configured in Windows/Linux
-    - Try adjusting audio settings in `xenia.config.toml`
+    - Try adjusting audio settings in `xenia-canary.config.toml`
     - Some games have known audio issues - check compatibility status
   </Accordion>
   
   <Accordion title="Controller not detected">
     - For Xbox 360 controllers, ensure drivers are installed
-    - For other controllers, configure them in `xenia.config.toml`
+    - For other controllers, configure them in `xenia-canary.config.toml`
     - Try using x360ce for non-Xbox controllers
     - Check the [HID configuration](/reference/configuration#hid-settings)
   </Accordion>
@@ -171,9 +171,9 @@ Xenia is intended for research and education. You must own the games you intend 
 
 ### Recommended Settings
 
-For best experience, add these settings to your `xenia.config.toml`:
+For best experience, add these settings to your `xenia-canary.config.toml`:
 
-```toml xenia.config.toml
+```toml xenia-canary.config.toml
 [GPU]
 gpu = "vulkan"
 vsync = false
@@ -191,16 +191,16 @@ Launch Xenia with these flags for specific purposes:
 
 ```bash
 # Log to console instead of file
-xenia.exe --log_file=stdout game.xex
+xenia_canary.exe --log_file=stdout game.xex
 
 # Start in fullscreen
-xenia.exe --fullscreen game.xex
+xenia_canary.exe --fullscreen game.xex
 
 # Disable V-sync for unlimited FPS
-xenia.exe --vsync=false game.xex
+xenia_canary.exe --vsync=false game.xex
 
 # Capture GPU trace for debugging
-xenia.exe --trace_gpu_prefix=trace_ game.xex
+xenia_canary.exe --trace_gpu_prefix=trace_ game.xex
 ```
 
 See the [Command-Line Reference](/reference/command-line) for all available flags.

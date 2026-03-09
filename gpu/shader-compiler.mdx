@@ -43,7 +43,7 @@ The compiler expects binary microcode shader files as input. These can be obtain
 When you run Xenia with shader dumping enabled:
 
 ```bash
-xenia.exe --dump_shaders=path/to/output/ game.xex
+xenia_canary.exe --dump_shaders=path/to/output/ game.xex
 ```
 
 Xenia will write all translated shaders to the specified path with names based on input hash. Binary files containing the original microcode are placed alongside the dumped output, making them easy to pipe to `xe-gpu-shader-compiler`.
@@ -112,4 +112,4 @@ The shader compiler processes Xbox 360 GPU microcode, which is based on AMD's R5
 - Texture sampling conventions
 - Vertex/fragment shader variations
 
-For more information on shader formats and the Xenos architecture, see the [GPU documentation](/gpu).
+For more information on shader formats and the Xenos architecture, see the [GPU architecture documentation](/architecture/gpu).
